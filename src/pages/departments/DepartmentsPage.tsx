@@ -1,4 +1,4 @@
-import { Users, UserCircle, HeartPulse, Brain, Baby, Activity } from 'lucide-react'
+import { UserCircle, HeartPulse, Brain, Baby, Activity } from 'lucide-react'
 
 const depts = [
   { name: 'Cardiology', icon: HeartPulse, head: 'Dr. Amelia Hart', doctors: 12, patients: 1380 },
