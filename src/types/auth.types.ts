@@ -18,7 +18,6 @@ export interface AuthUser {
   email: string | null
   displayName: string | null
   photoURL: string | null
-  // Custom claims (from Firebase token)
   tenantId: string | null
   role: UserRole | null
   permissions: string[]
