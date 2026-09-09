@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   Clock,
   Plus,
   ShoppingCart,
   MoreHorizontal,
-  TrendingUp,
   Package,
   Layers,
   AlertCircle,
 } from "lucide-react";
-import { StatCard, Badge, Th, Td } from "./InvComponents";
+import { Badge, Th, Td } from "./InvComponents";
 import { items, expiryItems } from "./inventoryData";
 
 const lowStock = items.filter((i) =>
