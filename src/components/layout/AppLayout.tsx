@@ -18,11 +18,11 @@ const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Appointments", path: "/appointments", icon: CalendarCheck },
   { name: "Patients", path: "/patients", icon: Users },
-  { name: "Doctors", path: "/doctors", icon: Stethoscope },
-  { name: "Departments", path: "/departments", icon: Building2 },
-  { name: "Calendar", path: "/appointments/calendar", icon: Calendar },
+  // { name: "Doctors", path: "/doctors", icon: Stethoscope },
+  // { name: "Departments", path: "/departments", icon: Building2 },
+  // { name: "Calendar", path: "/appointments/calendar", icon: Calendar },
   { name: "Inventory", path: "/inventory", icon: Package },
-  { name: "Messages", path: "/messages", icon: Mail },
+  // { name: "Messages", path: "/messages", icon: Mail },
 ];
 
 export default function AppLayout() {
