@@ -1,5 +1,7 @@
 import { ChevronDown, Plus, CheckCircle2, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import RegisterPatientModal from './AddPatientPage'
 
 // Mock patient records
 const patientsData = [
@@ -14,8 +16,10 @@ const patientsData = [
 ]
 
 export default function PatientsPage() {
+  const [showModal, setShowModal] = useState(false)
   return (
     <div className="animate-in fade-in duration-500">
+      {showModal && <RegisterPatientModal onClose={() => setShowModal(false)} />}
       
       {/* Page Header Actions (Optional above the card, but let's keep it clean inside the card) */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
@@ -39,7 +43,7 @@ export default function PatientsPage() {
             
             <div className="w-px h-8 bg-[#dde5e7] mx-1"></div>
 
-            <button className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20">
+            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20">
               <Plus size={16} strokeWidth={2.5} />
               Add New Patient
             </button>

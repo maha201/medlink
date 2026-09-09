@@ -25,7 +25,7 @@ const DoctorDetailPage = lazy(() => import('@/pages/doctors/DoctorDetailPage'))
 const AppointmentsPage = lazy(() => import('@/pages/appointments/AppointmentsPage'))
 const AppointmentCalendarPage = lazy(() => import('@/pages/appointments/AppointmentCalendarPage'))
 const DepartmentsPage = lazy(() => import('@/pages/departments/DepartmentsPage'))
-const InventoryPage = lazy(() => import('@/pages/inventory/InventoryPage'))
+const InventoryDashboardPage = lazy(() => import('@/pages/inventory/InvDashboard'))
 const PharmacyPage = lazy(() => import('@/pages/pharmacy/PharmacyPage'))
 const LaboratoryPage = lazy(() => import('@/pages/laboratory/LaboratoryPage'))
 const BillingPage = lazy(() => import('@/pages/billing/BillingPage'))
@@ -37,7 +37,9 @@ const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 // ── Super Admin Pages ──────────────────────────────────────
 const SADashboardPage = lazy(() => import('@/pages/superadmin/SADashboardPage'))
 const SAHospitalsPage = lazy(() => import('@/pages/superadmin/SAHospitalsPage'))
+const SAHospitalSetupPage = lazy(() => import('@/pages/superadmin/SAHospitalSetupPage'))
 const SAPlansPage = lazy(() => import('@/pages/superadmin/SAPlansPage'))
+const SAModuleControlPage = lazy(() => import('@/pages/superadmin/SAModuleControlPage'))
 const SAUsersPage = lazy(() => import('@/pages/superadmin/SAUsersPage'))
 const SAAuditLogsPage = lazy(() => import('@/pages/superadmin/SAAuditLogsPage'))
 
@@ -84,7 +86,7 @@ export const router = createBrowserRouter([
           { path: '/appointments', element: S(<AppointmentsPage />) },
           { path: '/appointments/calendar', element: S(<AppointmentCalendarPage />) },
           { path: '/departments', element: S(<DepartmentsPage />) },
-          { path: '/inventory', element: S(<InventoryPage />) },
+          { path: '/inventory', element: S(<InventoryDashboardPage onAddItem={() => {}} onCreatePO={() => {}} />) },
           { path: '/pharmacy', element: S(<PharmacyPage />) },
           { path: '/laboratory', element: S(<LaboratoryPage />) },
           { path: '/billing', element: S(<BillingPage />) },
@@ -105,7 +107,9 @@ export const router = createBrowserRouter([
         children: [
           { path: '/superadmin', element: S(<SADashboardPage />) },
           { path: '/superadmin/hospitals', element: S(<SAHospitalsPage />) },
+          { path: '/superadmin/hospital-setup', element: S(<SAHospitalSetupPage />) },
           { path: '/superadmin/plans', element: S(<SAPlansPage />) },
+          { path: '/superadmin/modules', element: S(<SAModuleControlPage />) },
           { path: '/superadmin/users', element: S(<SAUsersPage />) },
           { path: '/superadmin/audit-logs', element: S(<SAAuditLogsPage />) },
         ],

@@ -1,4 +1,6 @@
-import { ChevronDown, Info, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, Info, CheckCircle2, Plus } from 'lucide-react'
+import { useState } from 'react'
+import BookAppointmentModal from './BookAppointmentModal'
 
 // Mock data based on the provided screenshot
 const appointmentsData = [
@@ -14,8 +16,10 @@ const appointmentsData = [
 ]
 
 export default function AppointmentsPage() {
+  const [showModal, setShowModal] = useState(false)
   return (
     <div className="animate-in fade-in duration-500">
+      {showModal && <BookAppointmentModal onClose={() => setShowModal(false)} />}
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         
         {/* Header & Filters */}
@@ -32,6 +36,9 @@ export default function AppointmentsPage() {
                 <ChevronDown size={14} />
               </button>
             ))}
+            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20">
+              <Plus size={14} strokeWidth={2.5} /> Book Appointment
+            </button>
           </div>
         </div>
 

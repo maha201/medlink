@@ -8,7 +8,7 @@ export default function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/dashboard')
+    navigate('/superadmin')
   }
 
   return (
@@ -63,12 +63,22 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <button
-          type="submit"
-          className="w-full bg-[#3a9898] hover:bg-[#2b6e6e] text-white font-medium rounded-xl py-3.5 text-sm transition-all shadow-[0_4px_12px_rgba(58,152,152,0.25)] hover:shadow-[0_6px_16px_rgba(58,152,152,0.35)]"
-        >
-          Login
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/superadmin')}
+            className="w-full bg-[#0f1923] hover:bg-[#1a2d3d] text-white font-medium rounded-xl py-3.5 text-sm transition-all"
+          >
+            Login as Admin
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="w-full bg-[#3a9898] hover:bg-[#2b6e6e] text-white font-medium rounded-xl py-3.5 text-sm transition-all shadow-[0_4px_12px_rgba(58,152,152,0.25)]"
+          >
+            Login as Incharge
+          </button>
+        </div>
       </form>
 
       <div className="mt-8 text-center text-xs text-[#8b9bae]">

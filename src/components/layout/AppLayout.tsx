@@ -1,4 +1,5 @@
-import { Outlet, useLocation, Link } from "react-router-dom";
+import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -9,28 +10,28 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import SignOutModal from "@/components/modal/signout";
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Appointments", path: "/appointments", icon: CalendarCheck },
   { name: "Patients", path: "/patients", icon: Users },
-  // { name: "Doctors", path: "/doctors", icon: Stethoscope },
-  // { name: "Departments", path: "/departments", icon: Building2 },
-  // { name: "Calendar", path: "/appointments/calendar", icon: Calendar },
   { name: "Inventory", path: "/inventory", icon: Package },
-  // { name: "Messages", path: "/messages", icon: Mail },
 ];
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showSignOut, setShowSignOut] = useState(false);
 
   return (
     <div className="flex h-screen bg-[#f5f7f8] overflow-hidden font-sans">
       {/* Sidebar */}
-      <aside className="w-[240px] bg-white flex flex-col hidden md:flex shrink-0 z-20">
+      {/* Sidebar */}
+      <aside className="w-[200px] bg-white flex flex-col hidden md:flex shrink-0 z-20">
         {/* Logo */}
-        <div className="h-20 flex items-center px-6 gap-2 shrink-0">
-          <div className="w-8 h-8 text-[#3a9898]">
+        <div className="h-16 flex items-center px-4 gap-2 shrink-0">
+          <div className="w-7 h-7 text-[#3a9898] flex items-center justify-center">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -38,30 +39,31 @@ export default function AppLayout() {
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="w-6 h-6"
             >
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
-          <span className="text-[#1a2632] text-xl font-bold tracking-tight">
+          <span className="text-[#1a2632] text-lg font-bold tracking-tight">
             Medlink
           </span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname.startsWith(item.path);
             return (
               <Link
                 key={item.name}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-full text-xs font-semibold transition-all ${
                   isActive
                     ? "bg-[#3a9898] text-white shadow-sm shadow-[#3a9898]/20"
                     : "text-[#5a6a76] hover:bg-[#f0f4f5] hover:text-[#1a2632]"
                 }`}
               >
-                <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
                 {item.name}
               </Link>
             );
@@ -69,42 +71,36 @@ export default function AppLayout() {
         </nav>
 
         {/* Upgrade Card & Sign Out */}
-        <div className="p-4 mt-auto shrink-0">
-          <div className="bg-[#eaf6f5] rounded-3xl p-5 text-center relative mt-12 mb-4 border border-[#c4e4e0]">
-            {/* Mock Illustration */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex justify-center">
-              <div className="w-[100px] h-[80px] bg-white rounded-t-full border-4 border-white overflow-hidden relative">
-                <div className="absolute inset-0 bg-blue-100 flex items-end justify-center">
-                  {/* Mock characters */}
-                  <div className="w-16 h-12 bg-[#3a9898] rounded-t-full"></div>
-                </div>
-              </div>
+        <div className="p-3 mt-auto shrink-0">
+          <div className="bg-[#eaf6f5] rounded-2xl p-3.5 text-center relative mt-6 mb-2 border border-[#c4e4e0]">
+            <div className="w-8 h-8 mx-auto -mt-7 mb-1 bg-[#3a9898] text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+              <span className="text-xs font-bold">⚡</span>
             </div>
 
-            <div className="pt-8">
-              <h4 className="font-bold text-[#1a2632] text-sm">
+            <div>
+              <h4 className="font-bold text-[#1a2632] text-xs">
                 Upgrade to Pro
               </h4>
-              <p className="text-[10px] text-[#5a6a76] mt-1.5 mb-4 leading-relaxed px-1">
-                Unlock premium features & enhance your LMS experience!
+              <p className="text-[9px] text-[#5a6a76] mt-1 mb-3 leading-tight px-0.5">
+                Unlock premium features & enhance your experience!
               </p>
-              <button className="w-full bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold py-2.5 rounded-xl transition-colors">
+              <button className="w-full bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[11px] font-bold py-2 rounded-lg transition-colors">
                 Upgrade Now
               </button>
             </div>
           </div>
 
-          <button className="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold text-[#5a6a76] hover:bg-[#f0f4f5] hover:text-[#1a2632] w-full transition-colors">
-            <LogOut size={18} />
+          <button onClick={() => setShowSignOut(true)} className="flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-[#5a6a76] hover:bg-[#f0f4f5] hover:text-[#1a2632] w-full transition-colors">
+            <LogOut size={16} />
             Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main Content Wrapper */}
-      <main className="flex-1 flex flex-col min-w-0 h-full">
+      <main className="flex-1 flex flex-col min-w-0 h-full bg-white">
         {/* Topbar Header */}
-        <header className="h-20 px-4 flex items-center justify-between bg-white shrink-0 sticky top-0 z-10 border-b border-[#dde5e7]">
+        <header className="h-20 px-8 flex items-center justify-between bg-white shrink-0 sticky top-0 z-10">
           <div>
             {location.pathname === "/dashboard" && (
               <h1 className="text-2xl font-bold text-[#1a2632]">Dashboard</h1>
@@ -164,14 +160,20 @@ export default function AppLayout() {
           </div>
         </header>
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 flex flex-col rounded-tl-[2rem] bg-[#f5f7f8]">
-          <div className="flex-1">
-            <Outlet />
+        {/* Scrollable Container Wrapper */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pr-4 pb-4 sm:pr-6 sm:pb-6">
+          {/* Outer Grey Container (Top Padding Removed) */}
+          <div className="flex-1 bg-[#f5f7f8] rounded-2xl p-3 sm:p-4 flex flex-col min-h-0">
+            {/* Inner Content Card (Clean without extra heavy padding) */}
+            <div className="flex-1 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-sm">
+              <div className="flex-1 overflow-y-auto">
+                <Outlet />
+              </div>
+            </div>
           </div>
 
-          {/* Footer */}
-          <footer className="mt-8 pt-4 flex flex-col sm:flex-row justify-between items-center text-[11px] font-medium text-[#8b9bae] shrink-0 border-t border-[#dde5e7]">
+          {/* Footer (Placed outside the grey container at the very bottom) */}
+          <footer className="mt-4 pt-2 flex flex-col sm:flex-row justify-between items-center text-[11px] font-medium text-[#8b9bae] shrink-0">
             <div className="flex items-center gap-4 mb-4 sm:mb-0">
               <span>Copyright © 2025 Peterdraw</span>
               <a href="#" className="hover:text-[#3a9898]">
@@ -256,6 +258,11 @@ export default function AppLayout() {
           </footer>
         </div>
       </main>
+      <SignOutModal
+        isopen={showSignOut}
+        onClose={() => setShowSignOut(false)}
+        onConfirm={() => { setShowSignOut(false); navigate('/login'); }}
+      />
     </div>
   );
 }
