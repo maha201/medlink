@@ -28,6 +28,9 @@ export interface AuthUser {
 
 export interface AuthState {
   user: AuthUser | null
+  token: string | null
   loading: boolean
   error: string | null
+  login: (email: string, password: string) => Promise<AuthUser>
+  logout: () => Promise<void>
 }

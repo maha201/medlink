@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Building2, Settings, CreditCard, ToggleLeft, Users, ScrollText, LogOut, ChevronRight } from 'lucide-react'
 import SignOutModal from '@/components/modal/signout'
+import { useAuth } from '@/hooks/useAuth'
 
 const navItems = [
   { name: 'Dashboard', path: '/superadmin', icon: LayoutDashboard, exact: true },
@@ -16,6 +17,7 @@ const navItems = [
 export default function SuperAdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const [showSignOut, setShowSignOut] = useState(false)
 
   const currentPage = navItems.find(n =>
@@ -103,7 +105,7 @@ export default function SuperAdminLayout() {
       <SignOutModal
         isopen={showSignOut}
         onClose={() => setShowSignOut(false)}
-        onConfirm={() => { setShowSignOut(false); navigate('/login') }}
+        onConfirm={async () => { await logout(); setShowSignOut(false); navigate('/login') }}
       />
     </div>
   )

@@ -11,6 +11,7 @@ import {
   LogOut,
 } from "lucide-react";
 import SignOutModal from "@/components/modal/signout";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -22,6 +23,7 @@ const navItems = [
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [showSignOut, setShowSignOut] = useState(false);
 
   return (
@@ -261,7 +263,7 @@ export default function AppLayout() {
       <SignOutModal
         isopen={showSignOut}
         onClose={() => setShowSignOut(false)}
-        onConfirm={() => { setShowSignOut(false); navigate('/login'); }}
+        onConfirm={async () => { await logout(); setShowSignOut(false); navigate('/login'); }}
       />
     </div>
   );

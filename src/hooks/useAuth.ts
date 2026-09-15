@@ -2,12 +2,15 @@
 import { useAuthContext } from '@/context/AuthContext'
 
 export function useAuth() {
-  const { user, loading, error } = useAuthContext()
+  const { user, token, loading, error, login, logout } = useAuthContext()
 
   return {
     user,
+    token,
     loading,
     error,
+    login,
+    logout,
     isAuthenticated: !!user,
     isSuperAdmin: user?.isSuperAdmin ?? false,
     role: user?.role,

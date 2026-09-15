@@ -1,8 +1,7 @@
 import { LogOut, X } from "lucide-react";
 
-export default function SignOutModal({ isopen: isOpen, onClose, onConfirm }: { isopen: boolean; onClose: () => void; onConfirm: () => void }) {
+export default function SignOutModal({ isopen: isOpen, onClose, onConfirm }: { isopen: boolean; onClose: () => void; onConfirm: () => void | Promise<void> }) {
   if (!isOpen) return null;
-  // ... rest of your code
 
   return (
     /* BACKDROP OVERLAY */
