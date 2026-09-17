@@ -6,7 +6,43 @@ export const API_BASE_URL = (
 ).replace(/\/$/, "");
 
 export const API_ENDPOINTS = {
+  // Hospital APIs
   hospitalDashboard: "hospital/dashboard",
+  hospitalPatients: "hospital/patients",
+  hospitalAppointments: "hospital/appointments",
+  hospitalInventoryItems: "hospital/inventory/items",
+  hospitalStockTransaction: "hospital/inventory/stock-transaction",
+
+  // Master Hospital APIs
+  hospitalList: "master/hospitals",
+  createHospital: "master/hospitals",
+  hospitalDetails: "master/hospitals/{id}",
+  updateHospital: "master/hospitals/{id}",
+  updateHospitalStatus: "master/hospitals/{id}/status",
+
+  // Hospital Setup
+  hospitalSetup: "master/hospitals/{id}/setup",
+  updateHospitalSetup: "master/hospitals/{id}/setup",
+
+  // Modules
+  modules: "master/modules",
+  hospitalModules: "master/hospitals/{id}/modules",
+  updateHospitalModules: "master/hospitals/{id}/modules",
+
+  // Plans and Subscriptions
+  plans: "master/plans",
+  subscriptions: "master/subscriptions",
+  hospitalSubscription: "master/hospitals/{id}/subscription",
+  updateHospitalSubscription: "master/hospitals/{id}/subscription",
+
+  // Admin Users
+  users: "master/users",
+  createUser: "master/users",
+  updateUserStatus: "master/users/{id}/status",
+  deleteUser: "master/users/{id}",
+
+  // Audit Logs
+  auditLogs: "master/audit-logs",
 } as const;
 
 const getAuthToken = () => {

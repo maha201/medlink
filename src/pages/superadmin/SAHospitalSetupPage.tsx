@@ -1,54 +1,257 @@
-import { useState } from 'react'
-import { Save } from 'lucide-react'
+"use client";
 
-const modules = ['Dashboard', 'Patients', 'Doctors', 'Appointments', 'Pharmacy', 'Laboratory', 'Billing', 'Inventory', 'Reports', 'Messages']
+import { useState, useEffect } from "react";
+import { Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { API_ENDPOINTS, apiFetch } from "@/lib/api/api";
 
-export default function SAHospitalSetupPage() {
+const modulesList = [
+  "Dashboard",
+  "Patients",
+  "Doctors",
+  "Appointments",
+  "Pharmacy",
+  "Laboratory",
+  "Billing",
+  "Inventory",
+  "Reports",
+  "Messages",
+];
+
+interface HospitalSetupPageProps {
+  hospitalId?: string | number; // Pass hospitalId to load/update existing setup
+}
+
+export default function SAHospitalSetupPage({
+  hospitalId,
+}: HospitalSetupPageProps) {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', city: '', state: '', address: '',
-    adminName: '', adminEmail: '', adminPhone: '',
-    plan: 'Basic', status: 'Trial',
-    expiryDate: '', maxDoctors: '', maxPatients: '',
-  })
-  const [enabledModules, setEnabledModules] = useState<string[]>(['Dashboard', 'Patients'])
-  const [saved, setSaved] = useState(false)
+    name: "",
+    email: "",
+    phone: "",
+    city: "",
+    state: "",
+    address: "",
+    adminName: "",
+    adminEmail: "",
+    adminPhone: "",
+    planId: "1", // Mapped with backend integer plan_id
+    status: "trial",
+    expiryDate: "",
+    maxDoctors: "",
+    maxPatients: "",
+  });
 
-  const toggle = (m: string) =>
-    setEnabledModules(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
+  const [enabledModules, setEnabledModules] = useState<string[]>([
+    "Dashboard",
+    "Patients",
+  ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
-  }
+  const [loading, setLoading] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const Field = ({ label, name, type = 'text', placeholder }: { label: string; name: string; type?: string; placeholder?: string }) => (
+  // 1. Fetch Existing Hospital Setup Details (GET)
+  useEffect(() => {
+    if (!hospitalId) return;
+
+    const fetchSetupData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Dynamic Endpoint replacement: /api/v1/master/hospitals/{id}/setup
+        const endpoint = API_ENDPOINTS.hospitalSetup
+          ? API_ENDPOINTS.hospitalSetup.replace("{id}", String(hospitalId))
+          : `/api/v1/master/hospitals/${hospitalId}/setup`;
+
+        const response = await apiFetch(endpoint);
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const data = result?.data || result;
+
+        if (data) {
+          setForm({
+            name: data.name || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            city: data.city || "",
+            state: data.state || "",
+            address: data.address || "",
+            adminName: data.admin_name || "",
+            adminEmail: data.admin_email || "",
+            adminPhone: data.admin_phone || "",
+            planId: String(data.plan_id || "1"),
+            status: data.status || "trial",
+            expiryDate: data.expiry_date || "",
+            maxDoctors: data.max_doctors ? String(data.max_doctors) : "",
+            maxPatients: data.max_patients ? String(data.max_patients) : "",
+          });
+
+          if (Array.isArray(data.modules)) {
+            setEnabledModules(data.modules);
+          }
+        }
+      } catch (err: any) {
+        console.error("Fetch Hospital Setup Error:", err);
+        setError(err.message || "Failed to load hospital setup details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSetupData();
+  }, [hospitalId]);
+
+  const toggleModule = (m: string) => {
+    setEnabledModules((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
+  };
+
+  // 2. Submit Logic (Create or Update API Payload)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    // Backend compatible payload format (snake_case mapping)
+    const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      city: form.city,
+      state: form.state,
+      address: form.address,
+      admin_name: form.adminName,
+      admin_email: form.adminEmail,
+      admin_phone: form.adminPhone,
+      plan_id: form.planId ? parseInt(form.planId, 10) : null,
+      status: form.status.toLowerCase(),
+      expiry_date: form.expiryDate || null,
+      max_doctors: form.maxDoctors ? parseInt(form.maxDoctors, 10) : null,
+      max_patients: form.maxPatients ? parseInt(form.maxPatients, 10) : null,
+      modules: enabledModules,
+    };
+
+    try {
+      let endpoint: string = API_ENDPOINTS.createHospital;
+      let method = "POST";
+
+      if (hospitalId) {
+        endpoint = API_ENDPOINTS.hospitalSetup.replace(
+          "{id}",
+          String(hospitalId),
+        );
+        method = "PUT";
+      }
+
+      const response = await apiFetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message || `Failed to save setup (${response.status})`,
+        );
+      }
+
+      setSuccessMessage(
+        hospitalId
+          ? "Hospital setup updated successfully!"
+          : "Hospital created successfully!",
+      );
+
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error("Save Hospital Setup Error:", err);
+      setError(err.message || "Failed to save hospital setup.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const Field = ({
+    label,
+    name,
+    type = "text",
+    placeholder,
+  }: {
+    label: string;
+    name: string;
+    type?: string;
+    placeholder?: string;
+  }) => (
     <div className="space-y-1.5">
       <label className="text-xs font-semibold text-[#5a6a76]">{label}</label>
       <input
         type={type}
         placeholder={placeholder || label}
         value={(form as Record<string, string>)[name]}
-        onChange={e => setForm(p => ({ ...p, [name]: e.target.value }))}
+        onChange={(e) => setForm((p) => ({ ...p, [name]: e.target.value }))}
         className="w-full bg-[#f5f7f8] border border-transparent rounded-xl px-4 py-2.5 text-xs text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898] transition-all placeholder:text-[#a8b8c8]"
       />
     </div>
-  )
+  );
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center space-x-2 text-[#3a9898]">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="text-sm font-medium">Loading Setup Data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-bold text-[#1a2632]">Hospital Setup</h1>
-        {saved && <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">✓ Saved successfully</span>}
+        <h1 className="text-lg font-bold text-[#1a2632]">
+          {hospitalId ? "Edit Hospital Setup" : "Hospital Setup"}
+        </h1>
+
+        {/* Notifications */}
+        {successMessage && (
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg">
+            <CheckCircle2 size={14} /> {successMessage}
+          </span>
+        )}
       </div>
+
+      {error && (
+        <div className="mb-5 flex items-center gap-3 rounded-xl bg-red-50 p-4 text-red-700 border border-red-100 text-xs">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Hospital Info */}
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[#1a2632] mb-2">Hospital Information</h2>
+          <h2 className="text-sm font-bold text-[#1a2632] mb-2">
+            Hospital Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Hospital Name" name="name" placeholder="e.g. Apollo Clinic" />
-            <Field label="Email" name="email" type="email" placeholder="admin@hospital.com" />
+            <Field
+              label="Hospital Name"
+              name="name"
+              placeholder="e.g. Apollo Clinic"
+            />
+            <Field
+              label="Email"
+              name="email"
+              type="email"
+              placeholder="admin@hospital.com"
+            />
             <Field label="Phone" name="phone" placeholder="+91 98765 43210" />
             <Field label="City" name="city" placeholder="Chennai" />
             <Field label="State" name="state" placeholder="Tamil Nadu" />
@@ -56,61 +259,100 @@ export default function SAHospitalSetupPage() {
           </div>
         </div>
 
-        {/* Admin Account */}
+        {/* Admin Account Metadata (Account creation happens separately) */}
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[#1a2632] mb-2">Hospital Admin Account</h2>
+          <h2 className="text-sm font-bold text-[#1a2632] mb-2">
+            Hospital Admin Metadata
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Admin Name" name="adminName" placeholder="Dr. John" />
-            <Field label="Admin Email" name="adminEmail" type="email" placeholder="john@hospital.com" />
-            <Field label="Admin Phone" name="adminPhone" placeholder="+91 98765 43210" />
+            <Field
+              label="Admin Email"
+              name="adminEmail"
+              type="email"
+              placeholder="john@hospital.com"
+            />
+            <Field
+              label="Admin Phone"
+              name="adminPhone"
+              placeholder="+91 98765 43210"
+            />
           </div>
         </div>
 
         {/* Plan & Limits */}
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[#1a2632] mb-2">Plan & Limits</h2>
+          <h2 className="text-sm font-bold text-[#1a2632] mb-2">
+            Plan & Limits
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-[#5a6a76]">Plan</label>
+              <label className="text-xs font-semibold text-[#5a6a76]">
+                Plan
+              </label>
               <select
-                value={form.plan}
-                onChange={e => setForm(p => ({ ...p, plan: e.target.value }))}
+                value={form.planId}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, planId: e.target.value }))
+                }
                 className="w-full bg-[#f5f7f8] border border-transparent rounded-xl px-4 py-2.5 text-xs text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898]"
               >
-                <option>Basic</option>
-                <option>Pro</option>
+                <option value="1">Basic Plan</option>
+                <option value="2">Pro Plan</option>
+                <option value="3">Enterprise Plan</option>
               </select>
             </div>
+
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-[#5a6a76]">Status</label>
+              <label className="text-xs font-semibold text-[#5a6a76]">
+                Status
+              </label>
               <select
                 value={form.status}
-                onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, status: e.target.value }))
+                }
                 className="w-full bg-[#f5f7f8] border border-transparent rounded-xl px-4 py-2.5 text-xs text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898]"
               >
-                <option>Trial</option>
-                <option>Active</option>
-                <option>Expired</option>
+                <option value="trial">Trial</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+                <option value="expired">Expired</option>
               </select>
             </div>
+
             <Field label="Expiry Date" name="expiryDate" type="date" />
-            <Field label="Max Doctors" name="maxDoctors" type="number" placeholder="e.g. 20" />
+            <Field
+              label="Max Doctors"
+              name="maxDoctors"
+              type="number"
+              placeholder="e.g. 20"
+            />
+            <Field
+              label="Max Patients"
+              name="maxPatients"
+              type="number"
+              placeholder="e.g. 500"
+            />
           </div>
         </div>
 
         {/* Modules */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-sm font-bold text-[#1a2632] mb-4">Enable Modules</h2>
+          <h2 className="text-sm font-bold text-[#1a2632] mb-4">
+            Enable Modules
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {modules.map(m => (
+            {modulesList.map((m) => (
               <button
                 key={m}
                 type="button"
-                onClick={() => toggle(m)}
+                onClick={() => toggleModule(m)}
                 className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
                   enabledModules.includes(m)
-                    ? 'bg-[#3a9898] text-white border-[#3a9898]'
-                    : 'bg-[#f5f7f8] text-[#5a6a76] border-transparent hover:border-[#3a9898]/30'
+                    ? "bg-[#3a9898] text-white border-[#3a9898]"
+                    : "bg-[#f5f7f8] text-[#5a6a76] border-transparent hover:border-[#3a9898]/30"
                 }`}
               >
                 {m}
@@ -122,12 +364,18 @@ export default function SAHospitalSetupPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-semibold px-6 py-3 rounded-xl transition-colors shadow-sm"
+            disabled={saving}
+            className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-semibold px-6 py-3 rounded-xl transition-colors shadow-sm disabled:opacity-50"
           >
-            <Save size={14} /> Save Hospital
+            {saving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
+            {saving ? "Saving Setup..." : "Save Hospital"}
           </button>
         </div>
       </form>
     </div>
-  )
+  );
 }
