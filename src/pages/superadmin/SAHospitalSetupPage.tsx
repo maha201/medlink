@@ -63,7 +63,7 @@ export default function SAHospitalSetupPage({
         // Dynamic Endpoint replacement: /api/v1/master/hospitals/{id}/setup
         const endpoint = API_ENDPOINTS.hospitalSetup
           ? API_ENDPOINTS.hospitalSetup.replace("{id}", String(hospitalId))
-          : `/api/v1/master/hospitals/${hospitalId}/setup`;
+          : `master/hospitals/${hospitalId}/setup`;
 
         const response = await apiFetch(endpoint);
 
