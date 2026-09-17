@@ -21,6 +21,38 @@ interface HospitalSetupPageProps {
   hospitalId?: string | number; // Pass hospitalId to load/update existing setup
 }
 
+// Fixed: Moved Field outside SAHospitalSetupPage so React does not re-create
+// the input component on every re-render (which causes input focus loss).
+interface FieldProps {
+  label: string;
+  name: string;
+  type?: string;
+  placeholder?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const Field = ({
+  label,
+  name,
+  type = "text",
+  placeholder,
+  value,
+  onChange,
+}: FieldProps) => (
+  <div className="space-y-1.5">
+    <label className="text-xs font-semibold text-[#5a6a76]">{label}</label>
+    <input
+      type={type}
+      name={name}
+      placeholder={placeholder || label}
+      value={value}
+      onChange={onChange}
+      className="w-full bg-[#f5f7f8] border border-transparent rounded-xl px-4 py-2.5 text-xs text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898] transition-all placeholder:text-[#a8b8c8]"
+    />
+  </div>
+);
+
 export default function SAHospitalSetupPage({
   hospitalId,
 }: HospitalSetupPageProps) {
@@ -50,6 +82,12 @@ export default function SAHospitalSetupPage({
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Helper change handler for inputs
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   // 1. Fetch Existing Hospital Setup Details (GET)
   useEffect(() => {
@@ -180,29 +218,6 @@ export default function SAHospitalSetupPage({
     }
   };
 
-  const Field = ({
-    label,
-    name,
-    type = "text",
-    placeholder,
-  }: {
-    label: string;
-    name: string;
-    type?: string;
-    placeholder?: string;
-  }) => (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-[#5a6a76]">{label}</label>
-      <input
-        type={type}
-        placeholder={placeholder || label}
-        value={(form as Record<string, string>)[name]}
-        onChange={(e) => setForm((p) => ({ ...p, [name]: e.target.value }))}
-        className="w-full bg-[#f5f7f8] border border-transparent rounded-xl px-4 py-2.5 text-xs text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898] transition-all placeholder:text-[#a8b8c8]"
-      />
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center space-x-2 text-[#3a9898]">
@@ -245,37 +260,75 @@ export default function SAHospitalSetupPage({
               label="Hospital Name"
               name="name"
               placeholder="e.g. Apollo Clinic"
+              value={form.name}
+              onChange={handleInputChange}
             />
             <Field
               label="Email"
               name="email"
               type="email"
               placeholder="admin@hospital.com"
+              value={form.email}
+              onChange={handleInputChange}
             />
-            <Field label="Phone" name="phone" placeholder="+91 98765 43210" />
-            <Field label="City" name="city" placeholder="Chennai" />
-            <Field label="State" name="state" placeholder="Tamil Nadu" />
-            <Field label="Address" name="address" placeholder="Full address" />
+            <Field
+              label="Phone"
+              name="phone"
+              placeholder="+91 98765 43210"
+              value={form.phone}
+              onChange={handleInputChange}
+            />
+            <Field
+              label="City"
+              name="city"
+              placeholder="Chennai"
+              value={form.city}
+              onChange={handleInputChange}
+            />
+            <Field
+              label="State"
+              name="state"
+              placeholder="Tamil Nadu"
+              value={form.state}
+              onChange={handleInputChange}
+            />
+            <Field
+              label="Address"
+              name="address"
+              placeholder="Full address"
+              value={form.address}
+              onChange={handleInputChange}
+            />
           </div>
         </div>
 
-        {/* Admin Account Metadata (Account creation happens separately) */}
+        {/* Admin Account Metadata */}
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
           <h2 className="text-sm font-bold text-[#1a2632] mb-2">
             Hospital Admin Metadata
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Admin Name" name="adminName" placeholder="Dr. John" />
+            <Field
+              label="Admin Name"
+              name="adminName"
+              placeholder="Dr. John"
+              value={form.adminName}
+              onChange={handleInputChange}
+            />
             <Field
               label="Admin Email"
               name="adminEmail"
               type="email"
               placeholder="john@hospital.com"
+              value={form.adminEmail}
+              onChange={handleInputChange}
             />
             <Field
               label="Admin Phone"
               name="adminPhone"
               placeholder="+91 98765 43210"
+              value={form.adminPhone}
+              onChange={handleInputChange}
             />
           </div>
         </div>
@@ -322,18 +375,28 @@ export default function SAHospitalSetupPage({
               </select>
             </div>
 
-            <Field label="Expiry Date" name="expiryDate" type="date" />
+            <Field
+              label="Expiry Date"
+              name="expiryDate"
+              type="date"
+              value={form.expiryDate}
+              onChange={handleInputChange}
+            />
             <Field
               label="Max Doctors"
               name="maxDoctors"
               type="number"
               placeholder="e.g. 20"
+              value={form.maxDoctors}
+              onChange={handleInputChange}
             />
             <Field
               label="Max Patients"
               name="maxPatients"
               type="number"
               placeholder="e.g. 500"
+              value={form.maxPatients}
+              onChange={handleInputChange}
             />
           </div>
         </div>
