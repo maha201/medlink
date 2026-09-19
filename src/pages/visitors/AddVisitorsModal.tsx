@@ -3,12 +3,10 @@ import {
   X,
   User,
   UserPlus,
-  Phone,
   Clock,
   ShieldCheck,
   Upload,
   CheckCircle2,
-  FileText,
 } from "lucide-react";
 
 const visitorTypes = [

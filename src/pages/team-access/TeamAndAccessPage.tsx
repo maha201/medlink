@@ -1,8 +1,6 @@
 import { useState } from "react";
 import {
   UserPlus,
-  ArrowUpDown,
-  ChevronDown,
   ShieldCheck,
   ShieldAlert,
   Search,
@@ -14,7 +12,6 @@ import {
   Mail,
   Phone,
   Building2,
-  Lock,
 } from "lucide-react";
 import AddStaffModal from "./AddStaffModal";
 
@@ -114,7 +111,7 @@ export default function TeamAndAccessPage() {
   const [editStatus, setEditStatus] = useState<"Active" | "Inactive">("Active");
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
+  const [roleFilter] = useState("All");
 
   // Handle Adding New Staff
   const handleAddStaff = (newStaff: any) => {

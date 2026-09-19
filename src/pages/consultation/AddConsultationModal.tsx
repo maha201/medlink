@@ -5,10 +5,8 @@ import {
   UserPlus,
   Stethoscope,
   Clock,
-  MapPin,
   CheckCircle2,
   Upload,
-  FileText,
 } from "lucide-react";
 
 interface Props {

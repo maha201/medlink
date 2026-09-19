@@ -2,10 +2,8 @@ import { useState, useRef } from "react";
 import {
   X,
   User,
-  UserPlus,
   Calendar,
   Clock,
-  Stethoscope,
   CheckCircle2,
   Upload,
 } from "lucide-react";

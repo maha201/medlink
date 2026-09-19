@@ -84,9 +84,7 @@ export default function ConsultationPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
 
-  // Filters State
-  const [genderFilter, setGenderFilter] = useState("All");
-  const [typeFilter, setTypeFilter] = useState("All");
+  
 
   const handleAddConsultation = (newConsult: any) => {
     const newEntry: ConsultationRecord = {
