@@ -8,7 +8,11 @@ import {
   Search,
   Bell,
   Settings,
+  FileText,
   LogOut,
+  UserCheck,
+  Stethoscope,
+  ShieldCheck,
 } from "lucide-react";
 import SignOutModal from "@/components/modal/signout";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,8 +20,13 @@ import { useAuth } from "@/hooks/useAuth";
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Appointments", path: "/appointments", icon: CalendarCheck },
+  { name: "Follow up", path: "/follow-up", icon: Users },
+  { name: "Consultation", path: "/consultation", icon: Stethoscope },
   { name: "Patients", path: "/patients", icon: Users },
+  { name: "Visitors", path: "/visitors", icon: UserCheck },
   { name: "Inventory", path: "/inventory", icon: Package },
+  { name: "Reports", path: "/reports", icon: FileText },
+  { name: "Team & Access", path: "/team-access", icon: ShieldCheck },
 ];
 
 export default function AppLayout() {
@@ -28,7 +37,6 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen bg-[#f5f7f8] overflow-hidden font-sans">
-      {/* Sidebar */}
       {/* Sidebar */}
       <aside className="w-[200px] bg-white flex flex-col hidden md:flex shrink-0 z-20">
         {/* Logo */}
@@ -92,7 +100,10 @@ export default function AppLayout() {
             </div>
           </div>
 
-          <button onClick={() => setShowSignOut(true)} className="flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-[#5a6a76] hover:bg-[#f0f4f5] hover:text-[#1a2632] w-full transition-colors">
+          <button
+            onClick={() => setShowSignOut(true)}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-semibold text-[#5a6a76] hover:bg-[#f0f4f5] hover:text-[#1a2632] w-full transition-colors"
+          >
             <LogOut size={16} />
             Sign Out
           </button>
@@ -164,17 +175,17 @@ export default function AppLayout() {
 
         {/* Scrollable Container Wrapper */}
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pr-4 pb-4 sm:pr-6 sm:pb-6">
-          {/* Outer Grey Container (Top Padding Removed) */}
+          {/* Outer Grey Container */}
           <div className="flex-1 bg-[#f5f7f8] rounded-2xl p-3 sm:p-4 flex flex-col min-h-0">
-            {/* Inner Content Card (Clean without extra heavy padding) */}
-            <div className="flex-1 bg-white rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-sm">
+            {/* Inner Content Container - CHANGED: bg-white to bg-[#f5f7f8] and removed shadow */}
+            <div className="flex-1 bg-[#f5f7f8] rounded-2xl flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto">
                 <Outlet />
               </div>
             </div>
           </div>
 
-          {/* Footer (Placed outside the grey container at the very bottom) */}
+          {/* Footer */}
           <footer className="mt-4 pt-2 flex flex-col sm:flex-row justify-between items-center text-[11px] font-medium text-[#8b9bae] shrink-0">
             <div className="flex items-center gap-4 mb-4 sm:mb-0">
               <span>Copyright © 2025 Peterdraw</span>
@@ -263,7 +274,11 @@ export default function AppLayout() {
       <SignOutModal
         isopen={showSignOut}
         onClose={() => setShowSignOut(false)}
-        onConfirm={async () => { await logout(); setShowSignOut(false); navigate('/login'); }}
+        onConfirm={async () => {
+          await logout();
+          setShowSignOut(false);
+          navigate("/login");
+        }}
       />
     </div>
   );

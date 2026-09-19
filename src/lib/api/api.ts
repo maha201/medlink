@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
   hospitalStockTransaction: "hospital/inventory/stock-transaction",
 
   // Master Hospital APIs
+  Dashboard: "master/dashboard",
   hospitalList: "master/hospitals",
   createHospital: "master/hospitals",
   hospitalDetails: "master/hospitals/{id}",

@@ -4,6 +4,10 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { PublicRoute } from "./PublicRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { SuperAdminRoute } from "./SuperAdminRoute";
+import VisitorsPage from "@/pages/visitors/VisitorsPage";
+import ConsultationPage from "@/pages/consultation/consultationPage";
+import FollowUpPage from "@/pages/follow-up/followUpPage";
+import TeamAndAccessPage from "@/pages/team-access/TeamAndAccessPage";
 
 // ── Layouts ────────────────────────────────────────────────
 const AuthLayout = lazy(() => import("@/components/layout/AuthLayout"));
@@ -42,7 +46,7 @@ const InventoryDashboardPage = lazy(
 );
 const AddItemModal = lazy(() => import("@/pages/inventory/AddItemModal"));
 const PharmacyPage = lazy(() => import("@/pages/pharmacy/PharmacyPage"));
-const LaboratoryPage = lazy(() => import("@/pages/laboratory/LaboratoryPage"));
+const LaboratoryPage = lazy(() => import("@/pages/visitors/VisitorsPage"));
 const BillingPage = lazy(() => import("@/pages/billing/BillingPage"));
 const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const MessagesPage = lazy(() => import("@/pages/messages/MessagesPage"));
@@ -119,6 +123,10 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: "/dashboard", element: S(<DashboardPage />) },
           { path: "/patients", element: S(<PatientsPage />) },
+          { path: "/visitors", element: S(<VisitorsPage />) },
+          { path: "/team-access", element: S(<TeamAndAccessPage />) },
+          { path: "/follow-up", element: S(<FollowUpPage />) },
+          { path: "/consultation", element: S(<ConsultationPage />) },
           { path: "/patients/new", element: S(<AddPatientPage />) },
           { path: "/patients/:id", element: S(<PatientDetailPage />) },
           { path: "/doctors", element: S(<DoctorsPage />) },

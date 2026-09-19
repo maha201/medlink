@@ -159,16 +159,24 @@ export default function SAHospitalSetupPage({
     setSuccessMessage(null);
 
     // Backend compatible payload format (snake_case mapping)
+    // Clean phone numbers: remove all non-numeric characters except leading +
+    const sanitizePhone = (val: string) => {
+      if (!val) return "";
+      // Strip spaces, dashes, parentheses
+      const cleaned = val.replace(/[^\d+]/g, "");
+      return cleaned.slice(0, 20); // Force max 20 chars
+    };
+
     const payload = {
       name: form.name,
       email: form.email,
-      phone: form.phone,
+      phone: sanitizePhone(form.phone),
+      admin_phone: sanitizePhone(form.adminPhone),
       city: form.city,
       state: form.state,
       address: form.address,
       admin_name: form.adminName,
       admin_email: form.adminEmail,
-      admin_phone: form.adminPhone,
       plan_id: form.planId ? parseInt(form.planId, 10) : null,
       status: form.status.toLowerCase(),
       expiry_date: form.expiryDate || null,
