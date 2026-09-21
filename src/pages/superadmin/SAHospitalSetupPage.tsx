@@ -21,8 +21,6 @@ interface HospitalSetupPageProps {
   hospitalId?: string | number; // Pass hospitalId to load/update existing setup
 }
 
-// Fixed: Moved Field outside SAHospitalSetupPage so React does not re-create
-// the input component on every re-render (which causes input focus loss).
 interface FieldProps {
   label: string;
   name: string;
@@ -66,6 +64,7 @@ export default function SAHospitalSetupPage({
     adminName: "",
     adminEmail: "",
     adminPhone: "",
+    adminPassword: "", // Added newly required Admin Password field
     planId: "1", // Mapped with backend integer plan_id
     status: "trial",
     expiryDate: "",
@@ -123,6 +122,7 @@ export default function SAHospitalSetupPage({
             adminName: data.admin_name || "",
             adminEmail: data.admin_email || "",
             adminPhone: data.admin_phone || "",
+            adminPassword: "", // Password remains empty on edit for security
             planId: String(data.plan_id || "1"),
             status: data.status || "trial",
             expiryDate: data.expiry_date || "",
@@ -158,16 +158,15 @@ export default function SAHospitalSetupPage({
     setError(null);
     setSuccessMessage(null);
 
-    // Backend compatible payload format (snake_case mapping)
     // Clean phone numbers: remove all non-numeric characters except leading +
     const sanitizePhone = (val: string) => {
       if (!val) return "";
-      // Strip spaces, dashes, parentheses
       const cleaned = val.replace(/[^\d+]/g, "");
-      return cleaned.slice(0, 20); // Force max 20 chars
+      return cleaned.slice(0, 20);
     };
 
-    const payload = {
+    // Backend compatible payload format with password included
+    const payload: Record<string, any> = {
       name: form.name,
       email: form.email,
       phone: sanitizePhone(form.phone),
@@ -177,6 +176,8 @@ export default function SAHospitalSetupPage({
       address: form.address,
       admin_name: form.adminName,
       admin_email: form.adminEmail,
+      password: form.adminPassword || undefined, // Sent to backend to create user entry
+      admin_password: form.adminPassword || undefined,
       plan_id: form.planId ? parseInt(form.planId, 10) : null,
       status: form.status.toLowerCase(),
       expiry_date: form.expiryDate || null,
@@ -216,6 +217,9 @@ export default function SAHospitalSetupPage({
           ? "Hospital setup updated successfully!"
           : "Hospital created successfully!",
       );
+
+      // Clear password field after successful save
+      setForm((prev) => ({ ...prev, adminPassword: "" }));
 
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
@@ -315,7 +319,7 @@ export default function SAHospitalSetupPage({
           <h2 className="text-sm font-bold text-[#1a2632] mb-2">
             Hospital Admin Metadata
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Field
               label="Admin Name"
               name="adminName"
@@ -336,6 +340,14 @@ export default function SAHospitalSetupPage({
               name="adminPhone"
               placeholder="+91 98765 43210"
               value={form.adminPhone}
+              onChange={handleInputChange}
+            />
+            <Field
+              label="Admin Password"
+              name="adminPassword"
+              type="password"
+              placeholder="Min 6 characters"
+              value={form.adminPassword}
               onChange={handleInputChange}
             />
           </div>
