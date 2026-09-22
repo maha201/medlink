@@ -4,27 +4,25 @@ import { useState, useEffect } from "react";
 import { Save, Loader2, AlertCircle } from "lucide-react";
 import { API_ENDPOINTS, apiFetch } from "@/lib/api/api";
 
+interface Module {
+  id: number | string;
+  name: string;
+  code: string;
+  description?: string;
+  enabled?: boolean;
+}
+
 interface HospitalModuleData {
   id: number | string;
   hospital: string;
   plan: string;
-  modules: string[];
+  // Map of module ID (or code) -> enabled boolean
+  enabledModules: Record<string | number, boolean>;
 }
 
 export default function SAModuleControlPage() {
   const [hospitals, setHospitals] = useState<HospitalModuleData[]>([]);
-  const [allModules, setAllModules] = useState<string[]>([
-    "Dashboard",
-    "Patients",
-    "Doctors",
-    "Appointments",
-    "Pharmacy",
-    "Laboratory",
-    "Billing",
-    "Inventory",
-    "Reports",
-    "Messages",
-  ]);
+  const [allModules, setAllModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [savingId, setSavingId] = useState<string | number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,22 +34,20 @@ export default function SAModuleControlPage() {
         setLoading(true);
         setError(null);
 
-        // 1. Fetch available system modules
+        // 1. Fetch available master system modules
+        let masterModules: Module[] = [];
         try {
           const modResponse = await apiFetch(API_ENDPOINTS.modules);
           if (modResponse.ok) {
             const modResult = await modResponse.json();
             const modData = modResult?.data || modResult;
             if (Array.isArray(modData) && modData.length > 0) {
-              setAllModules(
-                modData.map((m: any) =>
-                  typeof m === "string" ? m : m.name || m.slug,
-                ),
-              );
+              masterModules = modData;
+              setAllModules(modData);
             }
           }
         } catch (err) {
-          console.warn("Using default modules fallback list:", err);
+          console.warn("Error fetching master modules list:", err);
         }
 
         // 2. Fetch hospital list
@@ -68,10 +64,9 @@ export default function SAModuleControlPage() {
         if (Array.isArray(hospList)) {
           const formattedHospitals = await Promise.all(
             hospList.map(async (h: any) => {
-              let activeModules = h.modules || [];
+              const enabledMap: Record<string | number, boolean> = {};
 
-              // If modules are not embedded, fetch via hospitalModules endpoint
-              if (!h.modules && API_ENDPOINTS.hospitalModules) {
+              if (API_ENDPOINTS.hospitalModules) {
                 try {
                   const endpoint = API_ENDPOINTS.hospitalModules.replace(
                     "{id}",
@@ -81,11 +76,12 @@ export default function SAModuleControlPage() {
                   if (mRes.ok) {
                     const mJson = await mRes.json();
                     const mData = mJson?.data || mJson;
-                    activeModules = Array.isArray(mData)
-                      ? mData.map((m: any) =>
-                          typeof m === "string" ? m : m.name || m.slug,
-                        )
-                      : [];
+                    if (Array.isArray(mData)) {
+                      mData.forEach((m: any) => {
+                        // Map module ID -> enabled state
+                        enabledMap[m.id] = m.enabled ?? true;
+                      });
+                    }
                   }
                 } catch (e) {
                   console.error(
@@ -99,7 +95,7 @@ export default function SAModuleControlPage() {
                 id: h.id,
                 hospital: h.name,
                 plan: h.plan_name || h.plan || "Basic",
-                modules: activeModules,
+                enabledModules: enabledMap,
               };
             }),
           );
@@ -108,7 +104,8 @@ export default function SAModuleControlPage() {
       } catch (err: any) {
         console.error("Module Control Data Fetch Error:", err);
         setError(err.message || "Failed to load module control data.");
-      } finally {
+      }
+      {
         setLoading(false);
       }
     };
@@ -116,21 +113,26 @@ export default function SAModuleControlPage() {
     fetchData();
   }, []);
 
-  const toggle = (hospitalId: string | number, mod: string) => {
+  const toggleModule = (
+    hospitalId: string | number,
+    moduleId: string | number,
+  ) => {
     setHospitals((prev) =>
       prev.map((h) => {
         if (h.id !== hospitalId) return h;
-        const has = h.modules.includes(mod);
+        const isCurrentlyEnabled = !!h.enabledModules[moduleId];
         return {
           ...h,
-          modules: has
-            ? h.modules.filter((m) => m !== mod)
-            : [...h.modules, mod],
+          enabledModules: {
+            ...h.enabledModules,
+            [moduleId]: !isCurrentlyEnabled,
+          },
         };
       }),
     );
   };
 
+  // Fixed Save Payload structure expected by ModuleController
   const save = async (hospitalId: string | number) => {
     const hospital = hospitals.find((h) => h.id === hospitalId);
     if (!hospital) return;
@@ -144,15 +146,21 @@ export default function SAModuleControlPage() {
         String(hospitalId),
       );
 
+      // Backend expects Array of objects containing "id" and "enabled"
+      const payloadModules = allModules.map((m) => ({
+        id: m.id,
+        enabled: !!hospital.enabledModules[m.id],
+      }));
+
       const response = await apiFetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ modules: hospital.modules }),
+        body: JSON.stringify({ modules: payloadModules }),
       });
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !result.success) {
         throw new Error(
           result?.message || `Failed to update modules (${response.status})`,
         );
@@ -194,57 +202,64 @@ export default function SAModuleControlPage() {
 
       <div className="space-y-4">
         {hospitals.length > 0 ? (
-          hospitals.map((h) => (
-            <div key={h.id} className="bg-white rounded-2xl shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-[#1a2632]">
-                    {h.hospital}
-                  </h3>
-                  <p className="text-[11px] text-[#8b9bae]">
-                    {h.plan} Plan · {h.modules.length} modules enabled
-                  </p>
+          hospitals.map((h) => {
+            const enabledCount = Object.values(h.enabledModules).filter(
+              Boolean,
+            ).length;
+
+            return (
+              <div key={h.id} className="bg-white rounded-2xl shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1a2632]">
+                      {h.hospital}
+                    </h3>
+                    <p className="text-[11px] text-[#8b9bae]">
+                      {h.plan} Plan · {enabledCount} modules enabled
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => save(h.id)}
+                    disabled={savingId === h.id}
+                    className="flex items-center gap-1.5 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {savingId === h.id ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" /> Saving...
+                      </>
+                    ) : successId === h.id ? (
+                      "✓ Saved"
+                    ) : (
+                      <>
+                        <Save size={12} /> Save
+                      </>
+                    )}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => save(h.id)}
-                  disabled={savingId === h.id}
-                  className="flex items-center gap-1.5 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  {savingId === h.id ? (
-                    <>
-                      <Loader2 size={12} className="animate-spin" /> Saving...
-                    </>
-                  ) : successId === h.id ? (
-                    "✓ Saved"
-                  ) : (
-                    <>
-                      <Save size={12} /> Save
-                    </>
-                  )}
-                </button>
+
+                <div className="flex flex-wrap gap-2">
+                  {allModules.map((m) => {
+                    const enabled = !!h.enabledModules[m.id];
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleModule(h.id, m.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                          enabled
+                            ? "bg-[#3a9898] text-white border-[#3a9898]"
+                            : "bg-[#f5f7f8] text-[#8b9bae] border-transparent hover:border-[#3a9898]/30"
+                        }`}
+                      >
+                        {m.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {allModules.map((m) => {
-                  const enabled = h.modules.includes(m);
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => toggle(h.id, m)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                        enabled
-                          ? "bg-[#3a9898] text-white border-[#3a9898]"
-                          : "bg-[#f5f7f8] text-[#8b9bae] border-transparent hover:border-[#3a9898]/30"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="bg-white rounded-2xl p-8 text-center text-xs text-[#8b9bae]">
             No hospital records found for module configuration.

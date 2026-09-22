@@ -2,11 +2,12 @@
 import { useAuthContext } from '@/context/AuthContext'
 
 export function useAuth() {
-  const { user, token, loading, error, login, logout } = useAuthContext()
+  const { user, token, modules, loading, error, login, logout } = useAuthContext()
 
   return {
     user,
     token,
+    modules,
     loading,
     error,
     login,

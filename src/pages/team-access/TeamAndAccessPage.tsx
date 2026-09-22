@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   UserPlus,
   ShieldCheck,
@@ -12,8 +13,11 @@ import {
   Mail,
   Phone,
   Building2,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import AddStaffModal from "./AddStaffModal";
+import { API_ENDPOINTS, apiFetch } from "@/lib/api/api";
 
 interface StaffMember {
   id: string;
@@ -21,7 +25,7 @@ interface StaffMember {
   name: string;
   email: string;
   phone: string;
-  role: "Doctor" | "Nurse" | "Receptionist" | "Pharmacist" | "Admin";
+  role: string;
   department: string;
   shift: string;
   status: "Active" | "Inactive";
@@ -29,141 +33,268 @@ interface StaffMember {
   joinedDate: string;
   highlight?: boolean;
 }
+const MODULE_LABELS: Record<string, string> = {
+  DASHBOARD: "Dashboard & Analytics",
+  VISITORS: "Visitors Register",
+  CONSULTATION: "Consultation & OPD",
+  FOLLOW_UP: "Patient Follow-ups",
+  FOLLOWUPS: "Patient Follow-ups",
+  PHARMACY: "Pharmacy & Prescriptions",
+  BILLING: "Billing & Invoices",
+  REPORTS: "Medical Reports",
+  SETTINGS: "Hospital Settings",
+};
 
-const MODULE_LIST = [
-  { id: "Dashboard", label: "Dashboard & Analytics" },
-  { id: "Visitors", label: "Visitors Register" },
-  { id: "Consultation", label: "Consultation & OPD" },
-  { id: "Follow-ups", label: "Patient Follow-ups" },
-  { id: "Pharmacy", label: "Pharmacy & Prescriptions" },
-  { id: "Billing", label: "Billing & Invoices" },
-  { id: "Reports", label: "Medical Reports" },
-  { id: "Settings", label: "Hospital Settings" },
-];
-
-const initialStaffList: StaffMember[] = [
-  {
-    id: "1",
-    empId: "EMP-2035-01",
-    name: "Dr. Sriram",
-    email: "sriram@hospital.com",
-    phone: "+91 98765 43210",
-    role: "Doctor",
-    department: "Dental",
-    shift: "Morning (08:00 AM - 04:00 PM)",
-    status: "Active",
-    accessModules: ["Consultation", "Visitors", "Follow-ups", "Reports"],
-    joinedDate: "Jan 10, 2024",
-  },
-  {
-    id: "2",
-    empId: "EMP-2035-12",
-    name: "Priya Sundar",
-    email: "priya@hospital.com",
-    phone: "+91 98765 12345",
-    role: "Receptionist",
-    department: "Front Desk",
-    shift: "General (09:00 AM - 05:00 PM)",
-    status: "Active",
-    accessModules: ["Visitors", "Consultation"],
-    joinedDate: "Mar 15, 2024",
-  },
-  {
-    id: "3",
-    empId: "EMP-2035-24",
-    name: "Karthik Raja",
-    email: "karthik@hospital.com",
-    phone: "+91 98123 45678",
-    role: "Pharmacist",
-    department: "Pharmacy",
-    shift: "Evening (02:00 PM - 10:00 PM)",
-    status: "Inactive",
-    accessModules: ["Pharmacy", "Billing"],
-    joinedDate: "Jun 01, 2025",
-  },
-  {
-    id: "4",
-    empId: "EMP-2035-31",
-    name: "Dr. Meena Swaminathan",
-    email: "meena@hospital.com",
-    phone: "+91 97890 12345",
-    role: "Doctor",
-    department: "Pediatrics",
-    shift: "Morning (08:00 AM - 04:00 PM)",
-    status: "Active",
-    accessModules: ["Consultation", "Follow-ups", "Reports"],
-    joinedDate: "Aug 20, 2025",
-    highlight: true,
-  },
-];
+const formatModuleLabel = (module: string) =>
+  MODULE_LABELS[module] ??
+  module
+    .toLowerCase()
+    .split(/[_-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 export default function TeamAndAccessPage() {
-  const [staffList, setStaffList] = useState<StaffMember[]>(initialStaffList);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const { modules } = useAuth();
+  const availableModules = modules.map((module) => module.trim().toUpperCase());
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
 
   // Detail View Drawer State
   const [viewStaff, setViewStaff] = useState<StaffMember | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
 
   // Edit Access Modal State
   const [editStaff, setEditStaff] = useState<StaffMember | null>(null);
   const [editModules, setEditModules] = useState<string[]>([]);
   const [editStatus, setEditStatus] = useState<"Active" | "Inactive">("Active");
+  const [updating, setUpdating] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter] = useState("All");
 
-  // Handle Adding New Staff
-  const handleAddStaff = (newStaff: any) => {
-    const newEntry: StaffMember = {
-      id: String(Date.now()),
-      empId: `EMP-2035-${Math.floor(10 + Math.random() * 89)}`,
-      name: newStaff.name,
-      email: newStaff.email,
-      phone: newStaff.phone || "+91 90000 00000",
-      role: newStaff.role,
-      department: newStaff.department,
-      shift: newStaff.shift || "General",
-      status: "Active",
-      accessModules: newStaff.accessModules || ["Dashboard"],
-      joinedDate: newStaff.joinedDate || "Today",
+  // Helper to normalize Backend API response to Frontend StaffMember Interface
+  // Helper to normalize Backend API response to Frontend StaffMember Interface
+  const transformStaffData = (item: any): StaffMember => {
+    // Normalize status string (handles "active", "Active", 1, true)
+    const rawStatus = String(item.status || "").toLowerCase();
+    const isActive =
+      rawStatus === "active" || item.status === 1 || item.status === true;
+
+    return {
+      id: String(item.id ?? item._id),
+      empId: item.emp_id || item.empId || `EMP-${item.id}`,
+      name: item.name || "",
+      email: item.email || "",
+      phone: item.phone || "",
+      role: item.role || "",
+      department: item.department || "",
+      shift: item.shift || "General",
+      status: isActive ? "Active" : "Inactive",
+      accessModules: Array.isArray(item.permissions)
+        ? item.permissions
+        : Array.isArray(item.modules)
+          ? item.modules
+          : Array.isArray(item.access_modules)
+            ? item.access_modules
+            : Array.isArray(item.accessModules)
+              ? item.accessModules
+              : [],
+      joinedDate:
+        item.joined_date || item.created_at || item.joinedDate || "N/A",
     };
-    setStaffList([newEntry, ...staffList]);
+  };
+
+  // 1. GET ALL STAFF: GET /team-access
+  const fetchStaffList = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const endpoint = API_ENDPOINTS?.getTeamAccess || "/team-access";
+      const response = await apiFetch(endpoint, { method: "GET" });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message || `Failed to load staff list (${response.status})`,
+        );
+      }
+
+      const rawData = result?.data || result || [];
+      const formattedList = Array.isArray(rawData)
+        ? rawData.map(transformStaffData)
+        : [];
+      setStaffList(formattedList);
+    } catch (err: any) {
+      setError(
+        err?.message || "Something went wrong while fetching team members.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStaffList();
+  }, [fetchStaffList]);
+
+  // 2. GET SINGLE STAFF DETAIL: GET /team-access/{id}
+  const handleViewStaff = async (staff: StaffMember) => {
+    setViewStaff(staff); // Instant preview
+    setLoadingDetail(true);
+    try {
+      const endpoint = `${API_ENDPOINTS?.getTeamAccess || "/team-access"}/${staff.id}`;
+      const response = await apiFetch(endpoint, { method: "GET" });
+      const result = await response.json().catch(() => null);
+
+      if (response.ok && result?.data) {
+        setViewStaff(transformStaffData(result.data));
+      }
+    } catch (err) {
+      console.error("Failed to fetch detailed staff profile:", err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  // 3. CREATE STAFF: POST /team-access
+  const handleAddStaff = async (newStaff: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    role: string;
+    department: string;
+    shift: string;
+    accessModules: string[];
+  }) => {
+    const endpoint = API_ENDPOINTS?.createHospitalStaff || "/team-access";
+    const response = await apiFetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newStaff.name,
+        email: newStaff.email,
+        password: newStaff.password,
+        phone: newStaff.phone,
+        role: newStaff.role,
+        department: newStaff.department,
+        shift: newStaff.shift,
+        modules: newStaff.accessModules,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || result?.success === false) {
+      throw new Error(
+        result?.message || `Failed to save staff (${response.status})`,
+      );
+    }
+
+    // Refresh list from server or prepend returned record
+    if (result?.data) {
+      const createdItem = transformStaffData(result.data);
+      setStaffList((prev) => [createdItem, ...prev]);
+    } else {
+      fetchStaffList();
+    }
   };
 
   // Open Edit Access Modal
   const handleOpenEdit = (staff: StaffMember, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditStaff(staff);
-    setEditModules([...staff.accessModules]);
+
+    // Normalize existing staff access modules to upper case for exact matching
+    const normalizedStaffModules = (staff.accessModules || []).map((m) =>
+      m.trim().toUpperCase(),
+    );
+    setEditModules(normalizedStaffModules);
     setEditStatus(staff.status);
   };
-
-  // Save Edit Access & Status Changes
-  const handleSaveEditAccess = () => {
+  // 4. UPDATE STAFF PERMISSIONS & PROFILE: PUT /team-access/{id}
+  const handleSaveEditAccess = async () => {
     if (!editStaff) return;
-    setStaffList((prev) =>
-      prev.map((s) =>
-        s.id === editStaff.id
-          ? { ...s, accessModules: editModules, status: editStatus }
-          : s,
-      ),
-    );
-    if (viewStaff && viewStaff.id === editStaff.id) {
-      setViewStaff({
-        ...viewStaff,
-        accessModules: editModules,
-        status: editStatus,
+    setUpdating(true);
+
+    try {
+      const endpoint = `${API_ENDPOINTS?.getTeamAccess || "/team-access"}/${editStaff.id}`;
+      const response = await apiFetch(endpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editStaff.name,
+          email: editStaff.email,
+          phone: editStaff.phone,
+          role: editStaff.role,
+          department: editStaff.department,
+          shift: editStaff.shift,
+          status: editStatus,
+          modules: editModules,
+        }),
       });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || result?.success === false) {
+        throw new Error(
+          result?.message || `Failed to update access (${response.status})`,
+        );
+      }
+
+      // Local State Sync
+      const updatedStaffMember: StaffMember = result?.data
+        ? transformStaffData(result.data)
+        : { ...editStaff, accessModules: editModules, status: editStatus };
+
+      setStaffList((prev) =>
+        prev.map((s) => (s.id === editStaff.id ? updatedStaffMember : s)),
+      );
+
+      if (viewStaff && viewStaff.id === editStaff.id) {
+        setViewStaff(updatedStaffMember);
+      }
+
+      setEditStaff(null);
+    } catch (err: any) {
+      alert(err?.message || "Failed to save updates.");
+    } finally {
+      setUpdating(false);
     }
-    setEditStaff(null);
   };
 
-  const toggleModuleInEdit = (moduleLabel: string) => {
+  // 5. UPDATE STATUS ONLY: PATCH /team-access/{id}/status
+  const handleStatusToggle = async (newStatus: "Active" | "Inactive") => {
+    if (!editStaff) return;
+    setEditStatus(newStatus);
+
+    try {
+      const endpoint = `${API_ENDPOINTS?.getTeamAccess || "/team-access"}/${editStaff.id}/status`;
+      const response = await apiFetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        console.warn(
+          "Direct PATCH status endpoint failed, fallback to state update.",
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update status on server:", err);
+    }
+  };
+
+  const toggleModuleInEdit = (moduleId: string) => {
     setEditModules((prev) =>
-      prev.includes(moduleLabel)
-        ? prev.filter((m) => m !== moduleLabel)
-        : [...prev, moduleLabel],
+      prev.includes(moduleId)
+        ? prev.filter((m) => m !== moduleId)
+        : [...prev, moduleId],
     );
   };
 
@@ -228,6 +359,7 @@ export default function TeamAndAccessPage() {
               </div>
               <button
                 onClick={() => setEditStaff(null)}
+                disabled={updating}
                 className="w-8 h-8 rounded-lg hover:bg-[#f0f4f5] flex items-center justify-center text-[#8b9bae]"
               >
                 <X size={16} />
@@ -251,7 +383,7 @@ export default function TeamAndAccessPage() {
                 <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-[#dde5e7]">
                   <button
                     type="button"
-                    onClick={() => setEditStatus("Active")}
+                    onClick={() => handleStatusToggle("Active")}
                     className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                       editStatus === "Active"
                         ? "bg-emerald-500 text-white shadow-xs"
@@ -262,7 +394,7 @@ export default function TeamAndAccessPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditStatus("Inactive")}
+                    onClick={() => handleStatusToggle("Inactive")}
                     className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                       editStatus === "Inactive"
                         ? "bg-rose-500 text-white shadow-xs"
@@ -280,20 +412,20 @@ export default function TeamAndAccessPage() {
                   Module Permissions
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {MODULE_LIST.map((mod) => {
-                    const isGranted = editModules.includes(mod.label);
+                  {availableModules.map((module) => {
+                    const isGranted = editModules.includes(module);
                     return (
                       <button
-                        key={mod.id}
+                        key={module}
                         type="button"
-                        onClick={() => toggleModuleInEdit(mod.label)}
+                        onClick={() => toggleModuleInEdit(module)}
                         className={`px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between text-xs font-semibold transition-all ${
                           isGranted
                             ? "border-[#3a9898] bg-[#eaf6f5] text-[#3a9898]"
                             : "border-[#e2e8ed] bg-[#f8fafb] text-[#8b9bae] hover:border-[#c4d4dc]"
                         }`}
                       >
-                        <span>{mod.label}</span>
+                        <span>{formatModuleLabel(module)}</span>
                         <div
                           className={`w-4 h-4 rounded-full flex items-center justify-center ${
                             isGranted
@@ -314,14 +446,17 @@ export default function TeamAndAccessPage() {
             <div className="px-6 py-4 border-t border-[#f0f4f5] flex justify-end gap-2 bg-white rounded-b-[20px]">
               <button
                 onClick={() => setEditStaff(null)}
+                disabled={updating}
                 className="px-4 py-2 text-xs font-semibold text-[#8b9bae] hover:text-[#1a2632]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEditAccess}
-                className="px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                disabled={updating}
+                className="px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2"
               >
+                {updating && <Loader2 size={13} className="animate-spin" />}
                 Save Changes
               </button>
             </div>
@@ -358,74 +493,92 @@ export default function TeamAndAccessPage() {
 
             {/* Drawer Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Status Badge */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#f8fafb] border border-[#e8edf2]">
-                <span className="text-xs font-semibold text-[#5a6a76]">
-                  Access Status
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                    viewStaff.status === "Active"
-                      ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                      : "bg-rose-50 text-rose-600 border border-rose-200"
-                  }`}
-                >
-                  {viewStaff.status === "Active" ? (
-                    <ShieldCheck size={13} />
-                  ) : (
-                    <ShieldAlert size={13} />
-                  )}
-                  {viewStaff.status}
-                </span>
-              </div>
-
-              {/* Personal Details */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-[#8b9bae] uppercase tracking-wider">
-                  Contact & Staff Profile
-                </h4>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2.5 text-[#1a2632]">
-                    <Mail size={14} className="text-[#3a9898]" />
-                    <span>{viewStaff.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-[#1a2632]">
-                    <Phone size={14} className="text-[#3a9898]" />
-                    <span>{viewStaff.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-[#1a2632]">
-                    <Building2 size={14} className="text-[#3a9898]" />
-                    <span>
-                      {viewStaff.role} ({viewStaff.department})
+              {loadingDetail ? (
+                <div className="flex flex-col items-center justify-center py-12 text-[#8b9bae]">
+                  <Loader2
+                    size={24}
+                    className="animate-spin mb-2 text-[#3a9898]"
+                  />
+                  <p className="text-xs">Fetching latest details...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Status Badge */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#f8fafb] border border-[#e8edf2]">
+                    <span className="text-xs font-semibold text-[#5a6a76]">
+                      Access Status
                     </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module Access */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#8b9bae] uppercase tracking-wider">
-                    Permitted Software Modules
-                  </h4>
-                  <button
-                    onClick={() => handleOpenEdit(viewStaff)}
-                    className="text-xs font-bold text-[#3a9898] hover:underline flex items-center gap-1"
-                  >
-                    <Edit size={12} /> Edit Access
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {viewStaff.accessModules.map((mod, i) => (
                     <span
-                      key={i}
-                      className="text-xs font-semibold bg-[#eaf6f5] text-[#3a9898] px-3 py-1 rounded-lg border border-[#c4e4e0]"
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                        viewStaff.status === "Active"
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                          : "bg-rose-50 text-rose-600 border border-rose-200"
+                      }`}
                     >
-                      {mod}
+                      {viewStaff.status === "Active" ? (
+                        <ShieldCheck size={13} />
+                      ) : (
+                        <ShieldAlert size={13} />
+                      )}
+                      {viewStaff.status}
                     </span>
-                  ))}
-                </div>
-              </div>
+                  </div>
+
+                  {/* Personal Details */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-[#8b9bae] uppercase tracking-wider">
+                      Contact & Staff Profile
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2.5 text-[#1a2632]">
+                        <Mail size={14} className="text-[#3a9898]" />
+                        <span>{viewStaff.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-[#1a2632]">
+                        <Phone size={14} className="text-[#3a9898]" />
+                        <span>{viewStaff.phone || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-[#1a2632]">
+                        <Building2 size={14} className="text-[#3a9898]" />
+                        <span>
+                          {viewStaff.role} ({viewStaff.department})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Module Access */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-[#8b9bae] uppercase tracking-wider">
+                        Permitted Software Modules
+                      </h4>
+                      <button
+                        onClick={() => handleOpenEdit(viewStaff)}
+                        className="text-xs font-bold text-[#3a9898] hover:underline flex items-center gap-1"
+                      >
+                        <Edit size={12} /> Edit Access
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {viewStaff.accessModules.length > 0 ? (
+                        viewStaff.accessModules.map((mod, i) => (
+                          <span
+                            key={i}
+                            className="text-xs font-semibold bg-[#eaf6f5] text-[#3a9898] px-3 py-1 rounded-lg border border-[#c4e4e0]"
+                          >
+                            {mod}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-[#8b9bae]">
+                          No permissions assigned.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Drawer Footer Action */}
@@ -469,6 +622,15 @@ export default function TeamAndAccessPage() {
               />
             </div>
 
+            {/* Refresh Button */}
+            <button
+              onClick={fetchStaffList}
+              title="Refresh List"
+              className="p-2 border border-[#e2e8ed] rounded-xl hover:bg-[#f8fafb] text-[#5a6a76] transition-all"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
+
             {/* Add Staff Button */}
             <button
               onClick={() => setShowAddModal(true)}
@@ -481,138 +643,170 @@ export default function TeamAndAccessPage() {
         </div>
 
         {/* Table Area */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#f8fafb] border-b border-[#dde5e7]">
-                <th className="py-4 pl-6 pr-4 w-12">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    checked={isAllSelected}
-                    className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
-                  />
-                </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  Staff Member
-                </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  Role & Dept
-                </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  Software Access Modules
-                </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  Status
-                </th>
-                <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
-                  Action
-                </th>
-              </tr>
-            </thead>
+        <div className="overflow-x-auto relative min-h-[250px]">
+          {loading ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-10">
+              <Loader2 size={32} className="animate-spin text-[#3a9898] mb-2" />
+              <p className="text-xs font-medium text-[#8b9bae]">
+                Loading team members...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="p-8 text-center">
+              <p className="text-sm font-semibold text-rose-500 mb-2">
+                {error}
+              </p>
+              <button
+                onClick={fetchStaffList}
+                className="px-4 py-1.5 bg-[#3a9898] text-white text-xs font-bold rounded-lg"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#f8fafb] border-b border-[#dde5e7]">
+                  <th className="py-4 pl-6 pr-4 w-12">
+                    <input
+                      type="checkbox"
+                      onChange={handleSelectAll}
+                      checked={isAllSelected}
+                      className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+                    />
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Staff Member
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Role & Dept
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Software Access Modules
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Status
+                  </th>
+                  <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
+                    Action
+                  </th>
+                </tr>
+              </thead>
 
-            <tbody className="divide-y divide-[#eef3f5]">
-              {filteredStaff.map((row) => {
-                const isSelected = selectedIds.includes(row.id);
-                return (
-                  <tr
-                    key={row.id}
-                    onClick={() => setViewStaff(row)}
-                    className={`cursor-pointer transition-colors ${
-                      row.highlight
-                        ? "bg-[#f2faf9] hover:bg-[#eaf6f5]"
-                        : "hover:bg-[#f8fafb]"
-                    }`}
-                  >
-                    <td className="py-4 pl-6 pr-4">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => handleSelectRow(row.id, e)}
-                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
-                      />
-                    </td>
-
-                    {/* Staff Name & ID */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#c8d8dc] shrink-0 flex items-center justify-center text-white text-xs font-bold">
-                          {row.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-[#1a2632] flex items-center gap-1.5">
-                            {row.name}
-                            <Eye
-                              size={12}
-                              className="text-[#8b9bae] hover:text-[#3a9898]"
-                            />
-                          </div>
-                          <div className="text-xs text-[#8b9bae]">
-                            {row.email} •{" "}
-                            <span className="font-semibold text-[#3a9898]">
-                              {row.empId}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Role & Dept */}
-                    <td className="py-4 px-4">
-                      <div className="text-xs font-bold text-[#1a2632]">
-                        {row.role}
-                      </div>
-                      <div className="text-[11px] text-[#8b9bae]">
-                        {row.department}
-                      </div>
-                    </td>
-
-                    {/* Access Badges */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-1.5 flex-wrap max-w-[280px]">
-                        {row.accessModules.map((mod, i) => (
-                          <span
-                            key={i}
-                            className="text-[10.5px] font-semibold bg-[#eaf6f5] text-[#3a9898] px-2.5 py-0.5 rounded-full border border-[#c4e4e0]"
-                          >
-                            {mod}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-4 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                          row.status === "Active"
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                            : "bg-rose-50 text-rose-600 border border-rose-200"
-                        }`}
-                      >
-                        {row.status === "Active" ? (
-                          <ShieldCheck size={13} />
-                        ) : (
-                          <ShieldAlert size={13} />
-                        )}
-                        {row.status}
-                      </span>
-                    </td>
-
-                    {/* Action Button */}
-                    <td className="py-4 px-6 text-center">
-                      <button
-                        onClick={(e) => handleOpenEdit(row, e)}
-                        className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#3a9898] text-white hover:bg-[#2b6e6e] transition-all"
-                      >
-                        <Edit size={12} /> Edit Access
-                      </button>
+              <tbody className="divide-y divide-[#eef3f5]">
+                {filteredStaff.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-12 text-center text-xs text-[#8b9bae]"
+                    >
+                      No staff members found.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ) : (
+                  filteredStaff.map((row) => {
+                    const isSelected = selectedIds.includes(row.id);
+                    return (
+                      <tr
+                        key={row.id}
+                        onClick={() => handleViewStaff(row)}
+                        className={`cursor-pointer transition-colors ${
+                          row.highlight
+                            ? "bg-[#f2faf9] hover:bg-[#eaf6f5]"
+                            : "hover:bg-[#f8fafb]"
+                        }`}
+                      >
+                        <td className="py-4 pl-6 pr-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => handleSelectRow(row.id, e)}
+                            className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+                          />
+                        </td>
+
+                        {/* Staff Name & ID */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#c8d8dc] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                              {row.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-[#1a2632] flex items-center gap-1.5">
+                                {row.name}
+                                <Eye
+                                  size={12}
+                                  className="text-[#8b9bae] hover:text-[#3a9898]"
+                                />
+                              </div>
+                              <div className="text-xs text-[#8b9bae]">
+                                {row.email} •{" "}
+                                <span className="font-semibold text-[#3a9898]">
+                                  {row.empId}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Role & Dept */}
+                        <td className="py-4 px-4">
+                          <div className="text-xs font-bold text-[#1a2632]">
+                            {row.role}
+                          </div>
+                          <div className="text-[11px] text-[#8b9bae]">
+                            {row.department}
+                          </div>
+                        </td>
+
+                        {/* Access Badges */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-1.5 flex-wrap max-w-[280px]">
+                            {row.accessModules.map((mod, i) => (
+                              <span
+                                key={i}
+                                className="text-[10.5px] font-semibold bg-[#eaf6f5] text-[#3a9898] px-2.5 py-0.5 rounded-full border border-[#c4e4e0]"
+                              >
+                                {mod}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                              row.status === "Active"
+                                ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                                : "bg-rose-50 text-rose-600 border border-rose-200"
+                            }`}
+                          >
+                            {row.status === "Active" ? (
+                              <ShieldCheck size={13} />
+                            ) : (
+                              <ShieldAlert size={13} />
+                            )}
+                            {row.status}
+                          </span>
+                        </td>
+
+                        {/* Action Button */}
+                        <td className="py-4 px-6 text-center">
+                          <button
+                            onClick={(e) => handleOpenEdit(row, e)}
+                            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#3a9898] text-white hover:bg-[#2b6e6e] transition-all"
+                          >
+                            <Edit size={12} /> Edit Access
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

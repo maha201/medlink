@@ -8,6 +8,7 @@ import VisitorsPage from "@/pages/visitors/VisitorsPage";
 import ConsultationPage from "@/pages/consultation/consultationPage";
 import FollowUpPage from "@/pages/follow-up/followUpPage";
 import TeamAndAccessPage from "@/pages/team-access/TeamAndAccessPage";
+import ClinicSettingsPage from "@/components/settings/ClinicSettingsPage";
 
 // ── Layouts ────────────────────────────────────────────────
 const AuthLayout = lazy(() => import("@/components/layout/AuthLayout"));
@@ -50,7 +51,7 @@ const LaboratoryPage = lazy(() => import("@/pages/visitors/VisitorsPage"));
 const BillingPage = lazy(() => import("@/pages/billing/BillingPage"));
 const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const MessagesPage = lazy(() => import("@/pages/messages/MessagesPage"));
-const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
+// const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const NotFoundPage = lazy(() => import("@/pages/errors/NotFoundPage"));
 
 // ── Super Admin Pages ──────────────────────────────────────
@@ -143,7 +144,7 @@ export const router = createBrowserRouter([
           { path: "/billing", element: S(<BillingPage />) },
           { path: "/reports", element: S(<ReportsPage />) },
           { path: "/messages", element: S(<MessagesPage />) },
-          { path: "/settings", element: S(<SettingsPage />) },
+          { path: "/settings", element: S(<ClinicSettingsPage />) },
         ],
       },
     ],

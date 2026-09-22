@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
+const DEFAULT_API_BASE_URL = "http://localhost:8000/api/v1";
 const AUTH_STORAGE_KEY = "medlink_auth";
 
 export const API_BASE_URL = (
@@ -6,12 +6,24 @@ export const API_BASE_URL = (
 ).replace(/\/$/, "");
 
 export const API_ENDPOINTS = {
+  // Authentication
+  authMe: "auth/me",
+
   // Hospital APIs
   hospitalDashboard: "hospital/dashboard",
   hospitalPatients: "hospital/patients",
   hospitalAppointments: "hospital/appointments",
   hospitalInventoryItems: "hospital/inventory/items",
   hospitalStockTransaction: "hospital/inventory/stock-transaction",
+  // TODO: Confirm the backend endpoint for creating hospital staff accounts.
+
+  createHospitalStaff: "hospital/team-access",
+  getTeamAccess: "hospital/team-access",
+  createTeamAccess: "hospital/team-access",
+  getTeamAccessById: "hospital/team-access/{id}",
+  updateTeamAccess: "hospital/team-access/{id}",
+  updateTeamAccessStatus: "hospital/team-access/{id}/status",
+  deleteTeamAccess: "hospital/team-access/{id}",
 
   // Master Hospital APIs
   Dashboard: "master/dashboard",

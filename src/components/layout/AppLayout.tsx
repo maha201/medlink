@@ -18,21 +18,23 @@ import SignOutModal from "@/components/modal/signout";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Appointments", path: "/appointments", icon: CalendarCheck },
-  { name: "Follow up", path: "/follow-up", icon: Users },
-  { name: "Consultation", path: "/consultation", icon: Stethoscope },
-  { name: "Patients", path: "/patients", icon: Users },
-  { name: "Visitors", path: "/visitors", icon: UserCheck },
-  { name: "Inventory", path: "/inventory", icon: Package },
-  { name: "Reports", path: "/reports", icon: FileText },
-  { name: "Team & Access", path: "/team-access", icon: ShieldCheck },
+  { name: "Dashboard", module: "DASHBOARD", path: "/dashboard", icon: LayoutDashboard },
+  { name: "Appointments", module: "APPOINTMENTS", path: "/appointments", icon: CalendarCheck },
+  { name: "Doctors", module: "DOCTORS", path: "/doctors", icon: Stethoscope },
+  { name: "Follow up", module: "FOLLOW_UP", path: "/follow-up", icon: Users },
+  { name: "Consultation", module: "CONSULTATION", path: "/consultation", icon: Stethoscope },
+  { name: "Patients", module: "PATIENTS", path: "/patients", icon: Users },
+  { name: "Visitors", module: "VISITORS", path: "/visitors", icon: UserCheck },
+  { name: "Inventory", module: "INVENTORY", path: "/inventory", icon: Package },
+  { name: "Reports", module: "REPORTS", path: "/reports", icon: FileText },
+  { name: "Team & Access", module: "TEAM_ACCESS", path: "/team-access", icon: ShieldCheck },
+  { name: "Clinic Settings", module: "CLINIC_SETTINGS", path: "/settings", icon: Settings },
 ];
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, modules } = useAuth();
   const [showSignOut, setShowSignOut] = useState(false);
 
   return (
@@ -61,7 +63,7 @@ export default function AppLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.filter((item) => modules.includes(item.module)).map((item) => {
             const isActive = location.pathname.startsWith(item.path);
             return (
               <Link

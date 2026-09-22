@@ -1,6 +1,7 @@
 // src/context/AuthContext.tsx
-import React, { createContext, useContext, useMemo, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { AuthState, AuthUser } from '@/types/auth.types'
+import { apiFetch, API_ENDPOINTS } from '@/lib/api/api'
 
 const AUTH_STORAGE_KEY = 'medlink_auth'
 
@@ -29,11 +30,26 @@ const getStoredAuth = (): { user: AuthUser | null; token: string | null } => {
 
 const AuthContext = createContext<AuthState | null>(null)
 
+type MeResponse = {
+  success?: boolean
+  message?: string
+  data?: {
+    user?: {
+      id?: number
+      email?: string | null
+      name?: string | null
+      role?: string | null
+    }
+    modules?: string[]
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const storedAuth = getStoredAuth()
   const [user, setUser] = useState<AuthUser | null>(storedAuth.user)
   const [token, setToken] = useState<string | null>(storedAuth.token)
-  const [loading, setLoading] = useState(false)
+  const [modules, setModules] = useState<string[]>([])
+  const [loading, setLoading] = useState(Boolean(storedAuth.token))
   const [error, setError] = useState<string | null>(null)
 
   const persistAuth = (nextUser: AuthUser | null, nextToken: string | null) => {
@@ -53,12 +69,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.removeItem(AUTH_STORAGE_KEY)
   }
 
+  const loadProfile = async (authToken: string, fallbackUser: AuthUser | null) => {
+    try {
+      const response = await apiFetch(API_ENDPOINTS.authMe)
+      const result = (await response.json()) as MeResponse
+
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.message || 'Unable to load user profile')
+      }
+
+      const profileUser = result.data.user
+      const nextUser = profileUser
+        ? {
+            ...(fallbackUser ?? {
+              uid: '',
+              email: null,
+              displayName: null,
+              photoURL: null,
+              tenantId: null,
+              role: null,
+              permissions: [],
+              isSuperAdmin: false,
+              planId: null,
+              subscriptionStatus: null,
+            }),
+            uid: String(profileUser.id ?? fallbackUser?.uid ?? ''),
+            email: profileUser.email ?? fallbackUser?.email ?? null,
+            displayName: profileUser.name ?? fallbackUser?.displayName ?? null,
+            role: (profileUser.role as AuthUser['role']) ?? fallbackUser?.role ?? null,
+          }
+        : fallbackUser
+
+      setUser(nextUser)
+      setModules(
+        Array.isArray(result.data.modules)
+          ? result.data.modules.map((module) => module.trim().toUpperCase())
+          : [],
+      )
+      persistAuth(nextUser, authToken)
+    } catch (err) {
+      console.warn('Unable to load authenticated user profile:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (storedAuth.token) {
+      void loadProfile(storedAuth.token, storedAuth.user)
+    }
+  }, [])
+
   const login = async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true)
     setError(null)
 
     try {
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1').replace(/\/$/, '')
       const response = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: {
@@ -101,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(nextUser)
       setToken(result.data.token)
       persistAuth(nextUser, result.data.token)
+      void loadProfile(result.data.token, nextUser)
 
       return nextUser
     } catch (err) {
@@ -114,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1').replace(/\/$/, '')
       await fetch(`${baseUrl}/auth/logout`, {
         method: 'POST',
         headers: {
@@ -127,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null)
       setToken(null)
+      setModules([])
       setError(null)
       persistAuth(null, null)
     }
@@ -136,12 +205,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       token,
+      modules,
       loading,
       error,
       login,
       logout,
     }),
-    [user, token, loading, error],
+    [user, token, modules, loading, error],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

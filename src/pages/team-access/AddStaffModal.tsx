@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   X,
   UserPlus,
@@ -7,28 +7,55 @@ import {
   Mail,
   Phone,
   Building2,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
   onClose: () => void;
-  onAddStaff: (staffData: any) => void;
+  onAddStaff: (staffData: StaffFormData) => Promise<void>;
 }
 
-const MODULE_LIST = [
-  { id: "dashboard", label: "Dashboard & Analytics" },
-  { id: "visitors", label: "Visitors Register" },
-  { id: "consultation", label: "Consultation & OPD" },
-  { id: "followups", label: "Patient Follow-ups" },
-  { id: "pharmacy", label: "Pharmacy & Prescriptions" },
-  { id: "billing", label: "Billing & Invoices" },
-  { id: "reports", label: "Medical Reports" },
-  { id: "settings", label: "Hospital Settings" },
-];
+interface StaffFormData {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: string;
+  department: string;
+  shift: string;
+  accessModules: string[];
+}
+
+const MODULE_LABELS: Record<string, string> = {
+  DASHBOARD: "Dashboard & Analytics",
+  VISITORS: "Visitors Register",
+  CONSULTATION: "Consultation & OPD",
+  FOLLOW_UP: "Patient Follow-ups",
+  FOLLOWUPS: "Patient Follow-ups",
+  PHARMACY: "Pharmacy & Prescriptions",
+  BILLING: "Billing & Invoices",
+  REPORTS: "Medical Reports",
+  SETTINGS: "Hospital Settings",
+};
+
+const formatModuleLabel = (module: string) =>
+  MODULE_LABELS[module] ??
+  module
+    .toLowerCase()
+    .split(/[_-]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 export default function AddStaffModal({ onClose, onAddStaff }: Props) {
+  const { modules } = useAuth();
+  const availableModules = modules.map((module) => module.trim().toUpperCase());
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     phone: "",
     role: "Doctor",
     department: "Dental",
@@ -36,10 +63,19 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
   });
 
   const [accessModules, setAccessModules] = useState<string[]>([
-    "dashboard",
-    "consultation",
-    "followups",
+    "DASHBOARD",
+    "CONSULTATION",
+    "FOLLOW_UP",
   ]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    setAccessModules((current) =>
+      current.filter((module) => availableModules.includes(module)),
+    );
+  }, [modules]);
 
   const toggleModule = (id: string) => {
     setAccessModules((prev) =>
@@ -47,17 +83,35 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) return;
 
-    onAddStaff({
-      ...formData,
-      accessModules,
-      status: "Active",
-      joinedDate: "Today",
-    });
-    onClose();
+    if (!formData.name || !formData.email || !formData.password) {
+      setError("Name, email, and password are required.");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      await onAddStaff({
+        ...formData,
+        role: formData.role?.toLowerCase(),
+        accessModules,
+      });
+
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save staff.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputCls =
@@ -92,7 +146,11 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-5">
+        <form
+          id="add-staff-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-7 py-5 space-y-5"
+        >
           {/* Section 1: Staff Details */}
           <div className="border border-[#e8edf2] rounded-[14px] p-5">
             <h3 className="text-[13px] font-bold text-[#1a2632] mb-4 flex items-center gap-2">
@@ -135,6 +193,34 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
                     size={14}
                     className="absolute right-3 top-3 text-[#b0bec8]"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Minimum 8 characters"
+                    className={`${inputCls} pr-10`}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b9bae] hover:text-[#3a9898]"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
               </div>
 
@@ -217,13 +303,13 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {MODULE_LIST.map((mod) => {
-                const isGranted = accessModules.includes(mod.id);
+              {availableModules.map((module) => {
+                const isGranted = accessModules.includes(module);
                 return (
                   <button
-                    key={mod.id}
+                    key={module}
                     type="button"
-                    onClick={() => toggleModule(mod.id)}
+                    onClick={() => toggleModule(module)}
                     className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
                       isGranted
                         ? "border-[#3a9898] bg-[#eaf6f5] text-[#1a2632]"
@@ -243,14 +329,17 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
                       </div>
                     </div>
                     <span className="text-[12px] font-bold leading-snug">
-                      {mod.label}
+                      {formatModuleLabel(module)}
                     </span>
                   </button>
                 );
               })}
             </div>
           </div>
-        </div>
+          {error && (
+            <p className="text-xs font-semibold text-red-600">{error}</p>
+          )}
+        </form>
 
         {/* Modal Footer */}
         <div className="px-7 py-4 border-t border-[#f0f4f5] flex items-center justify-between shrink-0 bg-white rounded-b-[20px]">
@@ -263,12 +352,17 @@ export default function AddStaffModal({ onClose, onAddStaff }: Props) {
           </button>
 
           <button
-            type="button"
-            onClick={handleSubmit}
+            type="submit"
+            form="add-staff-form"
+            disabled={submitting}
             className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20"
           >
-            <CheckCircle2 size={15} />
-            Add Staff & Save Access
+            {submitting ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <CheckCircle2 size={15} />
+            )}
+            {submitting ? "Saving..." : "Add Staff & Save Access"}
           </button>
         </div>
       </div>
