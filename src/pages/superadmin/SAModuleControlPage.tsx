@@ -35,14 +35,16 @@ export default function SAModuleControlPage() {
         setError(null);
 
         // 1. Fetch available master system modules
-        let masterModules: Module[] = [];
+
+        // 1. Fetch available master system modules
         try {
           const modResponse = await apiFetch(API_ENDPOINTS.modules);
+
           if (modResponse.ok) {
             const modResult = await modResponse.json();
             const modData = modResult?.data || modResult;
+
             if (Array.isArray(modData) && modData.length > 0) {
-              masterModules = modData;
               setAllModules(modData);
             }
           }
