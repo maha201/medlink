@@ -129,7 +129,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6 font-sans text-slate-800">
+    <div className="min-h-screen p-1 md:p-2 font-sans text-slate-800">
       {/* ERROR ALERT BANNER */}
       {error && (
         <div className="max-w-[1600px] mx-auto mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2 text-sm">

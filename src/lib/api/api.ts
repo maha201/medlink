@@ -9,11 +9,16 @@ export const API_ENDPOINTS = {
   // Authentication
   authMe: "auth/me",
 
+  // Appointments Management
+  hospitalAppointments: "hospital/appointments",
+  hospitalTodayOpd: "hospital/appointments/",
+  hospitalAppointmentById: "hospital/appointments/{id}",
+  updateHospitalAppointmentStatus: "hospital/appointments/{id}/status",
+
   // Hospital APIs
   hospitalDashboard: "hospital/dashboard",
   hospitalPatients: "hospital/patients",
   hospitalPatientById: "hospital/patients/{id}",
-  hospitalAppointments: "hospital/appointments",
   hospitalInventoryItems: "hospital/inventory/items",
   hospitalStockTransaction: "hospital/inventory/stock-transaction",
   hospitalDoctorProfile: "hospital/doctor-profile", // Added

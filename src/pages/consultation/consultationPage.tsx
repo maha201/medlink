@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { UserPlus, ArrowUpDown, ChevronDown, Play } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { UserPlus, ChevronDown, Play, Loader2, ArrowLeft } from "lucide-react";
 import AddConsultationModal from "./AddConsultationModal";
+import PatientConsultationView from "./ConsultationView"; // View component import
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
-interface ConsultationRecord {
+export interface ConsultationRecord {
   id: string;
   name: string;
   patientId: string;
@@ -18,95 +20,94 @@ interface ConsultationRecord {
   highlight?: boolean;
 }
 
-const initialConsultations: ConsultationRecord[] = [
-  {
-    id: "1",
-    name: "Alicia Perth",
-    patientId: "PT-2035-001",
-    gender: "female",
-    age: 34,
-    reason: "Tooth Pain",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    patientType: "OPD",
-    time: "1:00 PM",
-    location: "ICU 02 - 1st Floor",
-    status: "Start",
-  },
-  {
-    id: "2",
-    name: "Bima Kurnia",
-    patientId: "PT-2035-024",
-    gender: "male",
-    age: 29,
-    reason: "Gum Bleeding",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    patientType: "Follow Up",
-    time: "1:00 PM",
-    location: "ICU 02 - 1st Floor",
-    status: "Start",
-  },
-  {
-    id: "3",
-    name: "Clara Wright",
-    patientId: "PT-2035-053",
-    gender: "female",
-    age: 7,
-    reason: "Other",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    patientType: "Emergency",
-    time: "1:00 PM",
-    location: "ICU 02 - 1st Floor",
-    status: "In Treatment",
-  },
-  {
-    id: "4",
-    name: "Daniel Wong",
-    patientId: "PT-2035-078",
-    gender: "male",
-    age: 42,
-    reason: "Tooth Sensitivity",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    patientType: "Appointment",
-    time: "3:10 PM",
-    location: "Room 402B - 4th Floor",
-    status: "Start",
-    highlight: true, // Image light green row highlight
-  },
-];
-
 export default function ConsultationPage() {
-  const [records, setRecords] =
-    useState<ConsultationRecord[]>(initialConsultations);
+  const [records, setRecords] = useState<ConsultationRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  
+  // VIEW SCREEN CONNECTIVITY STATE
+  const [selectedConsultation, setSelectedConsultation] =
+    useState<ConsultationRecord | null>(null);
 
-  const handleAddConsultation = (newConsult: any) => {
-    const newEntry: ConsultationRecord = {
-      id: String(Date.now()),
-      name: newConsult.name || "Patient Name",
-      patientId:
-        newConsult.patientId ||
-        `PT-2035-${Math.floor(100 + Math.random() * 900)}`,
-      gender: newConsult.genderAge?.toLowerCase().includes("female")
-        ? "female"
-        : "male",
-      age: parseInt(newConsult.genderAge?.replace(/\D/g, "")) || 25,
-      reason: newConsult.reason || "General Checkup",
-      doctor: newConsult.doctor || "Dr. Sriram",
-      specialty: newConsult.specialty || "Dentist",
-      patientType: newConsult.patientType || "OPD",
-      time: newConsult.time || "2:00 PM",
-      location: newConsult.location || "Room 101",
-      status: "Start",
-    };
-    setRecords([newEntry, ...records]);
-  };
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalEntries, setTotalEntries] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Fetch Consultations
+  const fetchConsultations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const hospitalId = localStorage.getItem("hospitalId") || "";
+      const patientId = localStorage.getItem("patientId") || "";
+
+      const queryParams = new URLSearchParams({
+        page: String(currentPage),
+        limit: "20",
+        ...(hospitalId && { hospitalId }),
+        ...(patientId && { patientId }),
+      }).toString();
+
+      const rawResponse = await apiFetch(
+        `${API_ENDPOINTS.hospitalAppointments}?${queryParams}`,
+        { method: "GET" },
+      );
+
+      const res =
+        typeof rawResponse?.json === "function"
+          ? await rawResponse.json()
+          : rawResponse;
+
+      const dataList = Array.isArray(res) ? res : res?.data || [];
+
+      const formattedRecords: ConsultationRecord[] = dataList.map(
+        (item: any, index: number) => ({
+          id: String(item.id || item._id || index + 1),
+          name: item.name || item.patientName || "Daniel Wong",
+          patientId: item.patientId || item.patientCode || "PT-2035-078",
+          gender:
+            item.gender?.toLowerCase() === "female" || item.gender === "♀"
+              ? "female"
+              : "male",
+          age: Number(item.age) || 42,
+          reason: item.reason || item.reasonForVisit || "General Consultation",
+          doctor: item.doctor || item.doctorName || "Dr. Sriram",
+          specialty: item.specialty || item.doctorSpecialty || "Cardiology",
+          patientType: item.patientType || "OPD",
+          time: item.time || item.appointmentTime || "10:00 AM",
+          location: item.location || item.room || "Room 102",
+          status: item.status || "Start",
+          highlight: item.highlight || false,
+        }),
+      );
+
+      setRecords(formattedRecords);
+
+      const totalCount =
+        res?.meta?.total ?? res?.total ?? formattedRecords.length;
+      const totalPagesCount =
+        (res?.meta?.last_page ??
+          res?.totalPages ??
+          Math.ceil(totalCount / 20)) ||
+        1;
+
+      setTotalEntries(totalCount);
+      setTotalPages(totalPagesCount);
+    } catch (err: any) {
+      console.error("Fetch Consultations Error:", err);
+      setError(err?.message || "Consultation data-vai load seyyavillai.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchConsultations();
+  }, [fetchConsultations]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -116,7 +117,8 @@ export default function ConsultationPage() {
     }
   };
 
-  const handleSelectRow = (id: string) => {
+  const handleSelectRow = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop row click navigation
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
@@ -125,61 +127,46 @@ export default function ConsultationPage() {
   const isAllSelected =
     records.length > 0 && records.every((r) => selectedIds.includes(r.id));
 
-  const toggleStatus = (id: string) => {
-    setRecords((prev) =>
-      prev.map((rec) => {
-        if (rec.id === id) {
-          const nextStatus =
-            rec.status === "Start" ? "In Treatment" : "Completed";
-          return { ...rec, status: nextStatus };
-        }
-        return rec;
-      }),
+  // 1. IF A PATIENT IS SELECTED, SHOW THE PATIENT CONSULTATION VIEW SCREEN
+  if (selectedConsultation) {
+    return (
+      <div className="animate-in fade-in duration-300">
+        <button
+          onClick={() => setSelectedConsultation(null)}
+          className="mb-3 flex items-center gap-2 px-3 py-1.5 bg-white border border-[#dde5e7] text-[#3a9898] hover:bg-[#eaf6f5] rounded-xl text-xs font-bold transition-all"
+        >
+          <ArrowLeft size={14} /> Back to Consultation List
+        </button>
+        <PatientConsultationView
+          patientId={selectedConsultation.patientId}
+          appointmentId={selectedConsultation.id}
+          onClose={() => setSelectedConsultation(null)}
+        />
+      </div>
     );
-  };
+  }
 
+  // 2. DEFAULT CONSULTATION LIST SCREEN
   return (
     <div className="animate-in fade-in duration-500">
-      {/* Consultation Modal Trigger */}
       {showModal && (
         <AddConsultationModal
           onClose={() => setShowModal(false)}
-          onAddConsultation={handleAddConsultation}
+          onAddConsultation={() => fetchConsultations()}
         />
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
-        {/* ── Top Bar / Header ── */}
+        {/* Top Header Bar */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-col sm:flex-row gap-4">
           <h2 className="text-2xl font-bold text-[#1a2632]">Consultation</h2>
 
-          {/* Filters & Register Button */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Gender Filter Badge */}
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer">
               <span>Gender</span>
               <ChevronDown size={14} />
             </div>
 
-            {/* Age Filter Badge */}
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
-              <span>Age</span>
-              <ChevronDown size={14} />
-            </div>
-
-            {/* Patient Type Filter Badge */}
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
-              <span>Patient Type</span>
-              <ChevronDown size={14} />
-            </div>
-
-            {/* Condition Filter Badge */}
-            <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
-              <span>Condition</span>
-              <ChevronDown size={14} />
-            </div>
-
-            {/* Register Patient Primary Button */}
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-[#3a9898]/20 ml-2"
@@ -190,7 +177,7 @@ export default function ConsultationPage() {
           </div>
         </div>
 
-        {/* ── Table Area ── */}
+        {/* Consultation Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -200,169 +187,128 @@ export default function ConsultationPage() {
                     type="checkbox"
                     onChange={handleSelectAll}
                     checked={isAllSelected}
-                    className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+                    disabled={records.length === 0}
+                    className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] accent-[#3a9898]"
                   />
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Name <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Name
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Gender / Age <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Gender / Age
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Reason for visit <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Reason
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Doctor <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Doctor
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Patient Type <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Patient Type
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Time <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Time
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    Location <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae]">
+                  Location
                 </th>
-                <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
-                  <div className="flex items-center justify-center gap-1 cursor-pointer">
-                    Action <ArrowUpDown size={12} />
-                  </div>
+                <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] text-center">
+                  Action
                 </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-[#eef3f5]">
-              {records.map((row) => {
-                const isSelected = selectedIds.includes(row.id);
-                return (
-                  <tr
-                    key={row.id}
-                    className={`transition-colors ${
-                      row.highlight
-                        ? "bg-[#f2faf9] hover:bg-[#eaf6f5]"
-                        : "hover:bg-[#f8fafb]"
-                    }`}
-                  >
-                    <td className="py-4 pl-6 pr-4">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectRow(row.id)}
-                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-[#8b9bae]">
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                      <Loader2
+                        className="animate-spin text-[#3a9898]"
+                        size={20}
                       />
-                    </td>
+                      Loading consultation records...
+                    </div>
+                  </td>
+                </tr>
+              ) : records.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-[#8b9bae]">
+                    No consultation records found.
+                  </td>
+                </tr>
+              ) : (
+                records.map((row) => {
+                  const isSelected = selectedIds.includes(row.id);
+                  return (
+                    <tr
+                      key={row.id}
+                      onClick={() => setSelectedConsultation(row)} // Click row to open View Screen
+                      className="transition-colors hover:bg-[#f0f8f7] cursor-pointer"
+                    >
+                      <td className="py-4 pl-6 pr-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleSelectRow(row.id, e)}
+                          className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] accent-[#3a9898]"
+                        />
+                      </td>
 
-                    {/* Name & ID */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#c8d8dc] shrink-0 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                          {row.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-[#1a2632]">
-                            {row.name}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#c8d8dc] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                            {row.name ? row.name.charAt(0).toUpperCase() : "?"}
                           </div>
-                          <div className="text-xs text-[#8b9bae]">
-                            #{row.patientId}
+                          <div>
+                            <div className="text-sm font-bold text-[#1a2632] hover:underline">
+                              {row.name}
+                            </div>
+                            <div className="text-xs text-[#8b9bae]">
+                              #{row.patientId}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Gender / Age */}
-                    <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
-                      {row.gender === "female" ? "♀" : "♂"} / {row.age}
-                    </td>
+                      <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
+                        {row.gender === "female" ? "♀" : "♂"} / {row.age}
+                      </td>
 
-                    {/* Reason for Visit */}
-                    <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
-                      {row.reason}
-                    </td>
-
-                    {/* Doctor */}
-                    <td className="py-4 px-4">
-                      <div className="text-xs font-bold text-[#1a2632]">
+                      <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
+                        {row.reason}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-bold text-[#1a2632]">
                         {row.doctor}
-                      </div>
-                      <div className="text-[11px] text-[#8b9bae]">
-                        {row.specialty}
-                      </div>
-                    </td>
+                      </td>
+                      <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
+                        {row.patientType}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
+                        {row.time}
+                      </td>
+                      <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
+                        {row.location}
+                      </td>
 
-                    {/* Patient Type */}
-                    <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
-                      {row.patientType}
-                    </td>
-
-                    {/* Time */}
-                    <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
-                      {row.time}
-                    </td>
-
-                    {/* Location */}
-                    <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
-                      {row.location}
-                    </td>
-
-                    {/* Action Button */}
-                    <td className="py-4 px-6 text-center">
-                      <button
-                        onClick={() => toggleStatus(row.id)}
-                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                          row.status === "In Treatment"
-                            ? "bg-[#3a9898] text-white"
-                            : "bg-[#3a9898] text-white hover:bg-[#2b6e6e]"
-                        }`}
-                      >
-                        {row.status === "Start" && (
-                          <div className="w-3.5 h-3.5 border border-white border-dashed rounded-full flex items-center justify-center">
-                            <Play size={8} fill="currentColor" />
-                          </div>
-                        )}
-                        {row.status}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      <td className="py-4 px-6 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedConsultation(row); // View Screen opens on button click
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-[#3a9898] text-white hover:bg-[#2b6e6e]"
+                        >
+                          <Play size={10} fill="currentColor" />
+                          View / Start
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-        </div>
-
-        {/* Bottom Pagination Bar */}
-        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-xs text-[#5a6a76]">
-          <div>
-            Showing 1 to {records.length} of {records.length} entries
-          </div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">
-              Previous
-            </button>
-            <button className="px-3 py-1 rounded bg-[#3a9898] text-white font-medium">
-              1
-            </button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors">
-              2
-            </button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">
-              Next
-            </button>
-          </div>
         </div>
       </div>
     </div>

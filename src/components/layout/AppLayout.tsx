@@ -38,11 +38,22 @@ const navItems = [
     icon: FileText,
   },
   { name: "Doctors", module: "DOCTORS", path: "/doctors", icon: Stethoscope },
-  { name: "Follow up", module: "FOLLOW_UP", path: "/follow-up", icon: Users },
+  {
+    name: "Follow up",
+    module: "CONSULTATION",
+    path: "/follow-up",
+    icon: Users,
+  },
   {
     name: "Consultation",
     module: "CONSULTATION",
     path: "/consultation",
+    icon: Stethoscope,
+  },
+  {
+    name: "OPD - Today",
+    module: "CONSULTATION",
+    path: "/opd",
     icon: Stethoscope,
   },
   { name: "Patients", module: "PATIENTS", path: "/patients", icon: Users },
