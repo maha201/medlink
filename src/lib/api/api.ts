@@ -12,10 +12,17 @@ export const API_ENDPOINTS = {
   // Hospital APIs
   hospitalDashboard: "hospital/dashboard",
   hospitalPatients: "hospital/patients",
+  hospitalPatientById: "hospital/patients/{id}",
   hospitalAppointments: "hospital/appointments",
   hospitalInventoryItems: "hospital/inventory/items",
   hospitalStockTransaction: "hospital/inventory/stock-transaction",
+  hospitalDoctorProfile: "hospital/doctor-profile", // Added
+  hospitalDoctorSchedule: "hospital/doctor-schedule", // Added
   // TODO: Confirm the backend endpoint for creating hospital staff accounts.
+
+  // Visitors Management
+  hospitalVisitors: "hospital/visitors",
+  hospitalVisitorById: "hospital/visitors/{id}",
 
   createHospitalStaff: "hospital/team-access",
   getTeamAccess: "hospital/team-access",
@@ -53,6 +60,10 @@ export const API_ENDPOINTS = {
   createUser: "master/users",
   updateUserStatus: "master/users/{id}/status",
   deleteUser: "master/users/{id}",
+
+  // Hospital Treatment Plans
+  hospitalTreatmentPlans: "hospital/treatment-plans",
+  hospitalTreatmentPlanById: "hospital/treatment-plans/{id}",
 
   // Audit Logs
   auditLogs: "master/audit-logs",

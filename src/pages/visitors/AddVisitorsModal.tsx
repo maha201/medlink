@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   X,
   User,
@@ -7,7 +7,10 @@ import {
   ShieldCheck,
   Upload,
   CheckCircle2,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 const visitorTypes = [
   { id: "family", label: "Family / Relative" },
@@ -16,46 +19,125 @@ const visitorTypes = [
   { id: "other", label: "Other" },
 ];
 
+export interface VisitorData {
+  id?: string;
+  name: string;
+  mobile: string;
+  visitorType: string;
+  whomToVisit: string;
+  purpose: string;
+  checkIn: string;
+  checkOut: string;
+  remarks: string;
+  photoUrl?: string;
+}
+
 interface Props {
+  isOpen?: boolean;
+  initialData?: VisitorData | null;
   onClose?: () => void;
-  onAddVisitor?: (visitor: any) => void;
+  onSuccess?: () => void;
 }
 
 export default function AddVisitorModal({
+  isOpen = true,
+  initialData,
   onClose = () => {},
-  onAddVisitor,
+  onSuccess = () => {},
 }: Props) {
   const [visitorType, setVisitorType] = useState("family");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Form State
-  const [formData, setFormData] = useState({
-    name: "Sarah Jenkins",
-    mobile: "+91 98450 23145",
-    whomToVisit: "Daniel Wong (Room 402B - Orthopedics)",
+  const [formData, setFormData] = useState<Omit<VisitorData, "id">>({
+    name: "",
+    mobile: "",
+    visitorType: "family",
+    whomToVisit: "",
     purpose: "Patient Visit / General Care",
-    checkIn: "10:15 AM (Current)",
-    checkOut: "12:15 PM (2 Hours Pass)",
-    remarks:
-      "Issued RFID visitor card #842. Thermal scan normal (98.4°F). Accompanied by 1 minor.",
+    checkIn: "",
+    checkOut: "",
+    remarks: "",
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || "",
+        mobile: initialData.mobile || "",
+        visitorType: initialData.visitorType || "family",
+        whomToVisit: initialData.whomToVisit || "",
+        purpose: initialData.purpose || "Patient Visit / General Care",
+        checkIn: initialData.checkIn || "",
+        checkOut: initialData.checkOut || "",
+        remarks: initialData.remarks || "",
+      });
+      setVisitorType(initialData.visitorType || "family");
+      setPhotoPreview(initialData.photoUrl || null);
+    } else {
+      setFormData({
+        name: "",
+        mobile: "",
+        visitorType: "family",
+        whomToVisit: "",
+        purpose: "Patient Visit / General Care",
+        checkIn: "",
+        checkOut: "",
+        remarks: "",
+      });
+      setVisitorType("family");
+      setPhotoPreview(null);
+    }
+    setError(null);
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setPhotoPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onAddVisitor) {
-      onAddVisitor({
+    setLoading(true);
+    setError(null);
+
+    const isEdit = Boolean(initialData?.id);
+    const endpoint = isEdit
+      ? API_ENDPOINTS.hospitalVisitorById.replace("{id}", initialData!.id!)
+      : API_ENDPOINTS.hospitalVisitors;
+
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+      const payload = {
         ...formData,
-        visitorType:
-          visitorTypes.find((t) => t.id === visitorType)?.label || "Other",
+        visitorType,
+      };
+
+      const response = await apiFetch(endpoint, {
+        method,
+        body: JSON.stringify(payload),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message ||
+            `Failed to ${isEdit ? "update" : "create"} visitor pass.`,
+        );
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Something went wrong while saving.");
+    } finally {
+      setLoading(false);
     }
-    onClose();
   };
 
   const inputCls =
@@ -65,7 +147,7 @@ export default function AddVisitorModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white w-full max-w-[900px] max-h-[92vh] rounded-[20px] shadow-2xl flex flex-col border border-[#e2e8ed]">
+      <div className="bg-white w-full max-w-[900px] max-h-[92vh] rounded-[20px] shadow-2xl flex flex-col border border-[#e2e8ed] animate-in fade-in duration-200">
         {/* ── Header ── */}
         <div className="px-7 py-5 flex items-start justify-between shrink-0 border-b border-[#f0f4f5]">
           <div className="flex items-center gap-3.5">
@@ -75,20 +157,23 @@ export default function AddVisitorModal({
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-[16px] font-bold text-[#1a2632]">
-                  Add New Visitor Entry
+                  {initialData?.id
+                    ? "Edit Visitor Pass"
+                    : "Add New Visitor Entry"}
                 </h2>
                 <span className="text-[10.5px] font-bold bg-[#eaf6f5] text-[#3a9898] border border-[#c4e4e0] px-2.5 py-1 rounded-full">
-                  Pass #VIS-2035-{String(Math.floor(100 + Math.random() * 900))}
+                  {initialData?.id ? `ID: ${initialData.id}` : "New Entry"}
                 </span>
               </div>
               <p className="text-[12px] text-[#8b9bae] mt-0.5">
-                Enter visitor credentials and generate instant gate pass &
-                security check-in.
+                Enter visitor credentials and generate gate pass & security
+                check-in.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
+            type="button"
             className="w-8 h-8 rounded-lg hover:bg-[#f0f4f5] flex items-center justify-center text-[#8b9bae] hover:text-[#1a2632] transition-colors shrink-0"
           >
             <X size={16} />
@@ -96,7 +181,18 @@ export default function AddVisitorModal({
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-5">
+        <form
+          id="visitor-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-7 py-5 space-y-5"
+        >
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs font-semibold">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+
           {/* Section 1: Basic Information */}
           <div className="border border-[#e8edf2] rounded-[14px] p-5">
             <div className="flex items-center gap-2 mb-4">
@@ -149,6 +245,7 @@ export default function AddVisitorModal({
                 <div>
                   <label className={labelCls}>Visitor Full Name{reqStar}</label>
                   <input
+                    required
                     className={inputCls}
                     placeholder="e.g. Sarah Jenkins"
                     value={formData.name}
@@ -160,16 +257,15 @@ export default function AddVisitorModal({
 
                 <div>
                   <label className={labelCls}>Mobile Number{reqStar}</label>
-                  <div className="relative">
-                    <input
-                      className={inputCls}
-                      placeholder="+91 98450 23145"
-                      value={formData.mobile}
-                      onChange={(e) =>
-                        setFormData({ ...formData, mobile: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    required
+                    className={inputCls}
+                    placeholder="+91 98450 23145"
+                    value={formData.mobile}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mobile: e.target.value })
+                    }
+                  />
                 </div>
 
                 <div className="col-span-2">
@@ -218,6 +314,7 @@ export default function AddVisitorModal({
                     Whom to Visit (Patient / Staff Name){reqStar}
                   </label>
                   <input
+                    required
                     className={inputCls}
                     placeholder="e.g. Daniel Wong (Room 402B)"
                     value={formData.whomToVisit}
@@ -225,9 +322,6 @@ export default function AddVisitorModal({
                       setFormData({ ...formData, whomToVisit: e.target.value })
                     }
                   />
-                  <span className="text-[10px] text-[#3a9898] mt-1 block font-medium">
-                    MRN #PT-2035-078 • Admitted Ward B
-                  </span>
                 </div>
 
                 <div>
@@ -239,10 +333,18 @@ export default function AddVisitorModal({
                       setFormData({ ...formData, purpose: e.target.value })
                     }
                   >
-                    <option>Patient Visit / General Care</option>
-                    <option>Medical Consultation</option>
-                    <option>Official Business / Delivery</option>
-                    <option>Hospital Staff Guest</option>
+                    <option value="Patient Visit / General Care">
+                      Patient Visit / General Care
+                    </option>
+                    <option value="Medical Consultation">
+                      Medical Consultation
+                    </option>
+                    <option value="Official Business / Delivery">
+                      Official Business / Delivery
+                    </option>
+                    <option value="Hospital Staff Guest">
+                      Hospital Staff Guest
+                    </option>
                   </select>
                 </div>
               </div>
@@ -265,7 +367,10 @@ export default function AddVisitorModal({
                 <div>
                   <label className={labelCls}>Check-In Time{reqStar}</label>
                   <input
+                    required
+                    type="text"
                     className={inputCls}
+                    placeholder="e.g. 10:15 AM"
                     value={formData.checkIn}
                     onChange={(e) =>
                       setFormData({ ...formData, checkIn: e.target.value })
@@ -277,7 +382,10 @@ export default function AddVisitorModal({
                     Expected Check-out Time{reqStar}
                   </label>
                   <input
+                    required
+                    type="text"
                     className={inputCls}
+                    placeholder="e.g. 12:15 PM"
                     value={formData.checkOut}
                     onChange={(e) =>
                       setFormData({ ...formData, checkOut: e.target.value })
@@ -300,32 +408,36 @@ export default function AddVisitorModal({
               </div>
             </div>
           </div>
-        </div>
+        </form>
 
         {/* ── Sticky Footer ── */}
         <div className="px-7 py-4 border-t border-[#f0f4f5] flex items-center justify-between shrink-0 bg-white rounded-b-[20px]">
           <button
             type="button"
+            disabled={loading}
             onClick={onClose}
-            className="text-[12.5px] font-semibold text-[#8b9bae] hover:text-[#e11d48] transition-colors px-4 py-2.5 rounded-xl hover:bg-red-50"
+            className="text-[12.5px] font-semibold text-[#8b9bae] hover:text-[#e11d48] transition-colors px-4 py-2.5 rounded-xl hover:bg-red-50 disabled:opacity-50"
           >
-            Discard / Cancel
+            Cancel
           </button>
 
           <div className="flex items-center gap-3">
             <button
-              type="button"
-              className="text-[12.5px] font-semibold text-[#5a6a76] border border-[#e2e8ed] hover:border-[#3a9898] hover:text-[#3a9898] px-5 py-2.5 rounded-xl transition-all bg-white"
+              type="submit"
+              form="visitor-form"
+              disabled={loading}
+              className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20 disabled:opacity-50 cursor-pointer"
             >
-              Save as Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20"
-            >
-              <CheckCircle2 size={15} />
-              Check-In & Generate Visitor Pass
+              {loading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={15} />
+              )}
+              {loading
+                ? "Saving Pass..."
+                : initialData?.id
+                  ? "Update Visitor Pass"
+                  : "Check-In & Generate Visitor Pass"}
             </button>
           </div>
         </div>

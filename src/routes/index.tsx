@@ -9,6 +9,8 @@ import ConsultationPage from "@/pages/consultation/consultationPage";
 import FollowUpPage from "@/pages/follow-up/followUpPage";
 import TeamAndAccessPage from "@/pages/team-access/TeamAndAccessPage";
 import ClinicSettingsPage from "@/components/settings/ClinicSettingsPage";
+import TreatmentPlanList from "@/pages/treatment-plan/TreatmentPlanList";
+import DoctorProfile from "@/pages/doctor-profile/DoctorProfilePage";
 
 // ── Layouts ────────────────────────────────────────────────
 const AuthLayout = lazy(() => import("@/components/layout/AuthLayout"));
@@ -126,6 +128,8 @@ export const router = createBrowserRouter([
           { path: "/patients", element: S(<PatientsPage />) },
           { path: "/visitors", element: S(<VisitorsPage />) },
           { path: "/team-access", element: S(<TeamAndAccessPage />) },
+          { path: "/doctor-profile", element: S(<DoctorProfile />) },
+          { path: "/treatment-plan", element: S(<TreatmentPlanList />) },
           { path: "/follow-up", element: S(<FollowUpPage />) },
           { path: "/consultation", element: S(<ConsultationPage />) },
           { path: "/patients/new", element: S(<AddPatientPage />) },

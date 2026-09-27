@@ -1,37 +1,129 @@
-import { ChevronDown, Plus, CheckCircle2, Clock } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
-import RegisterPatientModal from './AddPatientPage'
+import {
+  ChevronDown,
+  Plus,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import RegisterPatientModal from "./AddPatientPage";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
-// Mock patient records
-const patientsData = [
-  { id: 'PT-2035-001', name: 'Alicia Perth', gender: 'Female', age: 34, blood: 'O+', phone: '+1 234 567 890', lastVisit: '12 Feb 2035', doctor: 'Dr. Amelia Hart', status: 'Active' },
-  { id: 'PT-2035-024', name: 'Bima Kurnia', gender: 'Male', age: 29, blood: 'A-', phone: '+1 234 567 891', lastVisit: '10 Mar 2035', doctor: 'Dr. Rizky Pratama', status: 'Active' },
-  { id: 'PT-2035-053', name: 'Clara Wright', gender: 'Female', age: 7, blood: 'B+', phone: '+1 234 567 892', lastVisit: '14 Mar 2035', doctor: 'Dr. Sophia Liang', status: 'Active' },
-  { id: 'PT-2035-078', name: 'Daniel Wong', gender: 'Male', age: 42, blood: 'AB+', phone: '+1 234 567 893', lastVisit: '01 Jan 2035', doctor: 'Dr. Daniel Obeng', status: 'Inactive' },
-  { id: 'PT-2035-091', name: 'Erica Smith', gender: 'Female', age: 26, blood: 'O-', phone: '+1 234 567 894', lastVisit: '15 Mar 2035', doctor: 'Dr. Nina Alvarez', status: 'New' },
-  { id: 'PT-2035-129', name: 'Francis Rowe', gender: 'Male', age: 51, blood: 'A+', phone: '+1 234 567 895', lastVisit: '08 Mar 2035', doctor: 'Dr. Amelia Hart', status: 'Active' },
-  { id: 'PT-2035-141', name: 'Grace Nathanile', gender: 'Female', age: 31, blood: 'O+', phone: '+1 234 567 896', lastVisit: '22 Feb 2035', doctor: 'Dr. Rizky Pratama', status: 'Inactive' },
-  { id: 'PT-2035-152', name: 'Hasan Malik', gender: 'Male', age: 47, blood: 'B-', phone: '+1 234 567 897', lastVisit: '12 Mar 2035', doctor: 'Dr. Daniel Obeng', status: 'Active' },
-]
+interface Patient {
+  id: number;
+  mrn?: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  phone?: string;
+  appointmentDate?: string;
+  status?: string;
+  photoUrl?: string | null;
+  [key: string]: any;
+}
 
 export default function PatientsPage() {
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalEntries, setTotalEntries] = useState<number>(0);
+
+  const fetchPatients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rawResponse = await apiFetch(
+        `${API_ENDPOINTS.hospitalPatients}?page=${currentPage}&limit=10`,
+        { method: "GET" },
+      );
+
+      // Response object-il irundhu JSON body-ai extract seiyya:
+      const res =
+        typeof rawResponse.json === "function"
+          ? await rawResponse.json()
+          : rawResponse;
+
+      console.log("Parsed JSON Response:", res);
+
+      const dataList = Array.isArray(res) ? res : res?.data || [];
+
+      setPatients(dataList);
+
+      const totalCount = res?.meta?.total ?? res?.total ?? dataList.length;
+      const totalPagesCount =
+        (res?.meta?.last_page ??
+          res?.totalPages ??
+          Math.ceil(totalCount / 10)) ||
+        1;
+
+      setTotalEntries(totalCount);
+      setTotalPages(totalPagesCount);
+    } catch (err: any) {
+      console.error("Fetch Patients Error:", err);
+      setError(err?.message || "Patients data-vai load seyyavillai.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
+  // Helper to calculate age if dob is available
+  const calculateAge = (dobString?: string): number | string => {
+    if (!dobString) return "N/A";
+    const birthDate = new Date(dobString);
+    if (isNaN(birthDate.getTime())) return "N/A";
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   return (
     <div className="animate-in fade-in duration-500">
-      {showModal && <RegisterPatientModal onClose={() => setShowModal(false)} />}
-      
-      {/* Page Header Actions (Optional above the card, but let's keep it clean inside the card) */}
+      {showModal && (
+        <RegisterPatientModal
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            fetchPatients();
+          }}
+        />
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
-        
         {/* Header & Filters */}
-        <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white">
-          <h2 className="text-xl font-bold text-[#1a2632]">Patient Directory</h2>
-          
-          <div className="flex gap-4">
+        <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-[#1a2632]">
+              Patient Directory
+            </h2>
+            <button
+              onClick={fetchPatients}
+              title="Refresh Data"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          <div className="flex gap-4 items-center">
             <div className="flex gap-2">
-              {['Status', 'Gender', 'Blood Group'].map((filter) => (
-                <button 
+              {["Status", "Gender", "Blood Group"].map((filter) => (
+                <button
                   key={filter}
                   className="flex items-center gap-2 px-4 py-2 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-semibold rounded-full transition-colors border border-[#dde5e7] hover:border-[#b5d9d5]"
                 >
@@ -40,126 +132,221 @@ export default function PatientsPage() {
                 </button>
               ))}
             </div>
-            
-            <div className="w-px h-8 bg-[#dde5e7] mx-1"></div>
 
-            <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20">
+            <div className="w-px h-8 bg-[#dde5e7] mx-1 hidden sm:block"></div>
+
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+            >
               <Plus size={16} strokeWidth={2.5} />
               Add New Patient
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white border-b border-[#dde5e7]">
-                <th className="py-4 pl-6 pr-4 w-12">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8]" />
-                </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Patient Name ↕</th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Gender / Age ↕</th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Blood ↕</th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Phone Number ↕</th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Last Visit ↕</th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">Primary Doctor ↕</th>
-                <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">Status ↕</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#dde5e7]">
-              {patientsData.map((row, i) => (
-                <tr key={i} className="hover:bg-[#f5f7f8] transition-colors group">
-                  <td className="py-4 pl-6 pr-4">
-                    <input type="checkbox" className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8] cursor-pointer" />
-                  </td>
-                  
-                  {/* Name & ID */}
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#dde5e7] shrink-0 overflow-hidden">
-                         {/* Mock Avatar placeholder */}
-                         <div className="w-full h-full bg-gray-200"></div>
-                      </div>
-                      <div>
-                        <Link to={`/patients/${row.id}`} className="text-sm font-bold text-[#1a2632] hover:text-[#3a9898] transition-colors">
-                          {row.name}
-                        </Link>
-                        <div className="text-xs text-[#8b9bae]">#{row.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  
-                  {/* Gender / Age */}
-                  <td className="py-4 px-4 text-sm text-[#5a6a76]">
-                    <span className="inline-flex items-center gap-1.5">
-                      {row.gender === 'Female' ? <span className="text-[#3a9898] font-bold">♀</span> : <span className="text-[#8b9bae] font-bold">♂</span>}
-                      / {row.age}
-                    </span>
-                  </td>
-                  
-                  {/* Blood Group */}
-                  <td className="py-4 px-4">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#f0f4f5] text-xs font-bold text-[#e11d48]">
-                      {row.blood}
-                    </span>
-                  </td>
-                  
-                  {/* Phone */}
-                  <td className="py-4 px-4 text-sm font-medium text-[#5a6a76]">
-                    {row.phone}
-                  </td>
-                  
-                  {/* Last Visit */}
-                  <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
-                    {row.lastVisit}
-                  </td>
-                  
-                  {/* Doctor */}
-                  <td className="py-4 px-4">
-                    <div className="text-sm font-bold text-[#1a2632]">{row.doctor}</div>
-                  </td>
-                  
-                  {/* Status Badge */}
-                  <td className="py-4 px-6 text-center">
-                    {row.status === 'Inactive' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f0f4f5] text-[#8b9bae] text-xs font-bold border border-[#dde5e7]">
-                        <Clock size={14} strokeWidth={2.5} />
-                        Inactive
-                      </span>
-                    )}
-                    {row.status === 'New' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#3a9898] text-white text-xs font-bold shadow-sm shadow-[#3a9898]/20">
-                        <Plus size={14} strokeWidth={2.5} />
-                        New Patient
-                      </span>
-                    )}
-                    {row.status === 'Active' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#eaf6f5] text-[#3a9898] text-xs font-bold border border-[#c4e4e0]">
-                        <CheckCircle2 size={14} strokeWidth={2.5} />
-                        Active
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination Footer */}
-        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-sm text-[#5a6a76]">
-          <div>Showing 1 to 8 of 465 entries</div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">Previous</button>
-            <button className="px-3 py-1 rounded bg-[#3a9898] text-white font-medium">1</button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors">2</button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors">3</button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">Next</button>
+        {/* Error Alert */}
+        {error && (
+          <div className="m-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium flex justify-between items-center">
+            <span>{error}</span>
+            <button
+              onClick={fetchPatients}
+              className="underline font-bold hover:text-red-800"
+            >
+              Retry
+            </button>
           </div>
+        )}
+
+        {/* Table Body */}
+        <div className="overflow-x-auto min-h-[300px]">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-3">
+              <Loader2 size={32} className="animate-spin text-[#3a9898]" />
+              <p className="text-xs font-semibold">Loading patients list...</p>
+            </div>
+          ) : patients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-2">
+              <p className="text-sm font-semibold text-[#1a2632]">
+                No Patients Found
+              </p>
+              <p className="text-xs">
+                Click "Add New Patient" to register a record.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white border-b border-[#dde5e7]">
+                  <th className="py-4 pl-6 pr-4 w-12">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8]"
+                    />
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Patient Name ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Gender / Age ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Blood ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Phone Number ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Appointment Date ↕
+                  </th>
+                  <th className="py-4 px-6 text-center text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Status ↕
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#dde5e7]">
+                {patients.map((row, i) => {
+                  const mrnCode = row.mrn || `MRN-${row.id}`;
+                  const fullName =
+                    `${row.firstName || ""} ${row.lastName || ""}`.trim() ||
+                    "N/A";
+                  const ageDisplay = calculateAge(row.dateOfBirth);
+                  const status = row.status || "active";
+
+                  return (
+                    <tr
+                      key={row.id || i}
+                      className="hover:bg-[#f5f7f8] transition-colors group"
+                    >
+                      <td className="py-4 pl-6 pr-4">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8] cursor-pointer"
+                        />
+                      </td>
+
+                      {/* Name & MRN */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#dde5e7] shrink-0 overflow-hidden flex items-center justify-center text-[#5a6a76] font-bold text-xs">
+                            {row.photoUrl ? (
+                              <img
+                                src={row.photoUrl}
+                                alt={fullName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              fullName.charAt(0)
+                            )}
+                          </div>
+                          <div>
+                            <Link
+                              to={`/patients/${row.id}`}
+                              className="text-sm font-bold text-[#1a2632] hover:text-[#3a9898] transition-colors"
+                            >
+                              {fullName}
+                            </Link>
+                            <div className="text-xs text-[#8b9bae]">
+                              {mrnCode}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Gender / Age */}
+                      <td className="py-4 px-4 text-sm text-[#5a6a76]">
+                        <span className="inline-flex items-center gap-1.5 capitalize">
+                          {row.gender?.toLowerCase() === "female" ? (
+                            <span className="text-[#3a9898] font-bold">♀</span>
+                          ) : (
+                            <span className="text-[#8b9bae] font-bold">♂</span>
+                          )}
+                          / {ageDisplay}
+                        </span>
+                      </td>
+
+                      {/* Blood Group */}
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center justify-center min-w-[32px] h-8 px-2 rounded-full bg-[#f0f4f5] text-xs font-bold text-[#e11d48]">
+                          {row.bloodGroup || "N/A"}
+                        </span>
+                      </td>
+
+                      {/* Phone */}
+                      <td className="py-4 px-4 text-sm font-medium text-[#5a6a76]">
+                        {row.phone || "—"}
+                      </td>
+
+                      {/* Appointment Date */}
+                      <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
+                        {row.appointmentDate || "N/A"}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td className="py-4 px-6 text-center">
+                        {status.toLowerCase() === "active" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#eaf6f5] text-[#3a9898] text-xs font-bold border border-[#c4e4e0] capitalize">
+                            <CheckCircle2 size={14} strokeWidth={2.5} />
+                            {status}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f0f4f5] text-[#8b9bae] text-xs font-bold border border-[#dde5e7] capitalize">
+                            <Clock size={14} strokeWidth={2.5} />
+                            {status}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
 
+        {/* Dynamic Pagination Footer */}
+        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-sm text-[#5a6a76] flex-wrap gap-3">
+          <div>
+            Showing {patients.length === 0 ? 0 : (currentPage - 1) * 10 + 1} to{" "}
+            {Math.min(currentPage * 10, totalEntries)} of {totalEntries} entries
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1 || loading}
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+              (pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1 rounded font-medium transition-all ${
+                    currentPage === pageNum
+                      ? "bg-[#3a9898] text-white"
+                      : "hover:bg-[#f0f4f5]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ),
+            )}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={
+                currentPage === totalPages || loading || totalPages === 0
+              }
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
