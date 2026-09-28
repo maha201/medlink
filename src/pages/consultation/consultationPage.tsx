@@ -25,16 +25,14 @@ export default function ConsultationPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   // VIEW SCREEN CONNECTIVITY STATE
   const [selectedConsultation, setSelectedConsultation] =
     useState<ConsultationRecord | null>(null);
 
   // Pagination states
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalEntries, setTotalEntries] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  const [currentPage] = useState<number>(1);
 
   // Fetch Consultations
   const fetchConsultations = useCallback(async () => {
@@ -86,17 +84,6 @@ export default function ConsultationPage() {
       );
 
       setRecords(formattedRecords);
-
-      const totalCount =
-        res?.meta?.total ?? res?.total ?? formattedRecords.length;
-      const totalPagesCount =
-        (res?.meta?.last_page ??
-          res?.totalPages ??
-          Math.ceil(totalCount / 20)) ||
-        1;
-
-      setTotalEntries(totalCount);
-      setTotalPages(totalPagesCount);
     } catch (err: any) {
       console.error("Fetch Consultations Error:", err);
       setError(err?.message || "Consultation data-vai load seyyavillai.");
@@ -117,7 +104,10 @@ export default function ConsultationPage() {
     }
   };
 
-  const handleSelectRow = (id: string, e: React.MouseEvent) => {
+  const handleSelectRow = (
+    id: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     e.stopPropagation(); // Stop row click navigation
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],

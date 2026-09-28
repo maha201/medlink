@@ -56,13 +56,13 @@ export default function BookAppointmentModal({ onClose, onSuccess }: Props) {
 
   // Dynamic Form States
   const [patientName, setPatientName] = useState("Riya Sharma");
-  const [mrn, setMrn] = useState("PT-2035-091");
+  const [mrn] = useState("PT-2035-091");
   const [phone, setPhone] = useState("+91 98765 43210");
   const [gender, setGender] = useState("Female");
   const [age, setAge] = useState("26");
   const [doctorId, setDoctorId] = useState("1");
-  const [departmentId, setDepartmentId] = useState("1");
-  const [patientId, setPatientId] = useState("1");
+  const departmentId = "1";
+  const patientId = "1";
   const [apptType, setApptType] = useState("consultation");
   const [date, setDate] = useState("2026-09-27");
   const [fee, setFee] = useState("500");
@@ -75,7 +75,6 @@ export default function BookAppointmentModal({ onClose, onSuccess }: Props) {
   // Pudhiya Consultation Type, Source & OPD States (Inside Function Component)
   const [consultationType, setConsultationType] = useState("In-clinic");
   const [consultationSource, setConsultationSource] = useState("Walk-in");
-  const [isOpdToday, setIsOpdToday] = useState(true);
 
   // API Call States
   const [loading, setLoading] = useState(false);
@@ -84,9 +83,6 @@ export default function BookAppointmentModal({ onClose, onSuccess }: Props) {
   // Source maarumpodhu "OPD Today" badge auto-check aagum logic
   const handleSourceChange = (val: string) => {
     setConsultationSource(val);
-    if (val === "Walk-in") {
-      setIsOpdToday(true);
-    }
   };
 
   const inputCls =

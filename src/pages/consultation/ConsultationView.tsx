@@ -24,8 +24,8 @@ export default function PatientConsultationView({
   appointmentId,
   onClose,
 }: PatientConsultationViewProps) {
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("9/8/2026");
+  const [, setLoading] = useState(false);
+  const [, setActiveTab] = useState("9/8/2026");
 
   // Clinical Record States
   const [chiefComplaint, setChiefComplaint] = useState(
@@ -33,7 +33,6 @@ export default function PatientConsultationView({
   );
   const [diagnosis, setDiagnosis] = useState("Rootcanal");
   const [conditions, setConditions] = useState("dangerous");
-  const [allergiesInput, setAllergiesInput] = useState("Peanuts");
   const [bodyWeight, setBodyWeight] = useState("80 KG");
   const [bodyHeight, setBodyHeight] = useState("172 CM");
   const [pressure, setPressure] = useState("140");
@@ -54,8 +53,7 @@ export default function PatientConsultationView({
   const [dispenseQty, setDispenseQty] = useState("5 Tablets");
   const [dispensePack, setDispensePack] = useState("1 Blister Pack");
   const [estPrice, setEstPrice] = useState("15.00");
-  const [foodRelation, setFoodRelation] = useState<"AC" | "PC" | "WF">("PC");
-  const [instructions, setInstructions] = useState(
+  const [, setInstructions] = useState(
     "Take 2 Tablets on Day 1 as a single initial dose, followed by 1 tablet once daily on Days 2 through 5. Administer after meals with a full glass of water.",
   );
 
