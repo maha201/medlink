@@ -19,7 +19,9 @@
     "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

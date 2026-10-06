@@ -54,8 +54,48 @@ const LaboratoryPage = lazy(() => import("@/pages/visitors/VisitorsPage"));
 const BillingPage = lazy(() => import("@/pages/billing/BillingPage"));
 const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const MessagesPage = lazy(() => import("@/pages/messages/MessagesPage"));
-// const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const NotFoundPage = lazy(() => import("@/pages/errors/NotFoundPage"));
+
+// ── POS Pages (Temporary pointing to PosDashboard or respective files) ──
+const PosDashboard = lazy(() => import("@/pages/pos/dashboard/PosDashboard"));
+const PosBilling = lazy(() => import("@/pages/pos/billing/PosBilling"));
+const AllSales = lazy(() => import("@/pages/pos/sales/AllSales"));
+const SalesReturns = lazy(() => import("@/pages/pos/sales/SalesReturns"));
+const SalesPayments = lazy(() => import("@/pages/pos/sales/SalesPayments"));
+const ProductsList = lazy(() => import("@/pages/pos/products/ProductsList"));
+const Categories = lazy(() => import("@/pages/pos/products/Categories"));
+const Brands = lazy(() => import("@/pages/pos/products/Brands"));
+const Units = lazy(() => import("@/pages/pos/products/Units"));
+const StockOverview = lazy(() => import("@/pages/pos/inventory/StockOverview"));
+const StockAdjustment = lazy(
+  () => import("@/pages/pos/inventory/StockAdjustment"),
+);
+const StockMovement = lazy(() => import("@/pages/pos/inventory/StockMovement"));
+const LowStock = lazy(() => import("@/pages/pos/inventory/LowStock"));
+const PurchasesList = lazy(() => import("@/pages/pos/purchases/PurchasesList"));
+const Suppliers = lazy(() => import("@/pages/pos/purchases/Suppliers"));
+const PurchaseReturns = lazy(
+  () => import("@/pages/pos/purchases/PurchaseReturns"),
+);
+const CustomersList = lazy(() => import("@/pages/pos/customers/CustomersList"));
+const CustomerPayments = lazy(
+  () => import("@/pages/pos/customers/CustomerPayments"),
+);
+const ExpensesList = lazy(() => import("@/pages/pos/expenses/ExpensesList"));
+const CashRegister = lazy(
+  () => import("@/pages/pos/cash-register/CashRegister"),
+);
+const SalesReport = lazy(() => import("@/pages/pos/reports/SalesReport"));
+const PurchaseReport = lazy(() => import("@/pages/pos/reports/PurchaseReport"));
+const InventoryReport = lazy(
+  () => import("@/pages/pos/reports/InventoryReport"),
+);
+const ExpenseReport = lazy(() => import("@/pages/pos/reports/ExpenseReport"));
+const ProfitReport = lazy(() => import("@/pages/pos/reports/ProfitReport"));
+const StaffList = lazy(() => import("@/pages/pos/staff/StaffList"));
+const StaffRoles = lazy(() => import("@/pages/pos/staff/Roles"));
+const StaffPermissions = lazy(() => import("@/pages/pos/staff/Permissions"));
+const PosSettings = lazy(() => import("@/pages/pos/settings/PosSettings"));
 
 // ── Super Admin Pages ──────────────────────────────────────
 const SADashboardPage = lazy(
@@ -151,6 +191,43 @@ export const router = createBrowserRouter([
           { path: "/reports", element: S(<ReportsPage />) },
           { path: "/messages", element: S(<MessagesPage />) },
           { path: "/settings", element: S(<ClinicSettingsPage />) },
+
+          // ── POS Routes ─────────────────────────────────
+          { path: "/pos/dashboard", element: S(<PosDashboard />) },
+          { path: "/pos/billing", element: S(<PosBilling />) },
+          { path: "/pos/sales/all", element: S(<AllSales />) },
+          { path: "/pos/sales/returns", element: S(<SalesReturns />) },
+          { path: "/pos/sales/payments", element: S(<SalesPayments />) },
+          { path: "/pos/products", element: S(<ProductsList />) },
+          { path: "/pos/products/categories", element: S(<Categories />) },
+          { path: "/pos/products/brands", element: S(<Brands />) },
+          { path: "/pos/products/units", element: S(<Units />) },
+          { path: "/pos/inventory/overview", element: S(<StockOverview />) },
+          {
+            path: "/pos/inventory/adjustment",
+            element: S(<StockAdjustment />),
+          },
+          { path: "/pos/inventory/movement", element: S(<StockMovement />) },
+          { path: "/pos/inventory/low-stock", element: S(<LowStock />) },
+          { path: "/pos/purchases", element: S(<PurchasesList />) },
+          { path: "/pos/purchases/suppliers", element: S(<Suppliers />) },
+          { path: "/pos/purchases/returns", element: S(<PurchaseReturns />) },
+          { path: "/pos/customers", element: S(<CustomersList />) },
+          { path: "/pos/customers/payments", element: S(<CustomerPayments />) },
+          { path: "/pos/expenses", element: S(<ExpensesList />) },
+          { path: "/pos/cash-register", element: S(<CashRegister />) },
+          {
+            path: "/pos/reports/sales",
+            element: S(<SalesReport />),
+          },
+          { path: "/pos/reports/purchase", element: S(<PurchaseReport />) },
+          { path: "/pos/reports/inventory", element: S(<InventoryReport />) },
+          { path: "/pos/reports/expense", element: S(<ExpenseReport />) },
+          { path: "/pos/reports/profit", element: S(<ProfitReport />) },
+          { path: "/pos/staff", element: S(<StaffList />) },
+          { path: "/pos/staff/roles", element: S(<StaffRoles />) },
+          { path: "/pos/staff/permissions", element: S(<StaffPermissions />) },
+          { path: "/pos/settings", element: S(<PosSettings />) },
         ],
       },
     ],
