@@ -116,7 +116,7 @@ export default function StaffPermissions() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#1a2632]">
-                Access Permissions Matrix
+                Access Permissions Matrix1
               </h2>
               <p className="text-xs text-[#8b9bae]">
                 Configure granular module-level permissions for each specific
