@@ -1,5 +1,12 @@
-import React, { useState } from "react";
-import { RotateCcw, Search, Plus, Calendar, FileText } from "lucide-react";
+import {
+  RotateCcw,
+  Search,
+  Plus,
+  Calendar,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface PurchaseReturnItem {
   id: string;
@@ -35,107 +42,251 @@ const initialReturns: PurchaseReturnItem[] = [
   },
 ];
 
-const PurchaseReturns: React.FC = () => {
+export default function PurchaseReturns() {
   const [returns, setReturns] = useState<PurchaseReturnItem[]>(initialReturns);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const filteredReturns = returns.filter(
-    (item) =>
-      item.returnNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.purchaseNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.supplierName.toLowerCase().includes(searchTerm.toLowerCase()),
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 600);
+  };
+
+  const filteredReturns = useMemo(() => {
+    return returns.filter(
+      (item) =>
+        item.returnNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.purchaseNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.supplierName.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [returns, searchTerm]);
+
+  // Pagination calculation
+  const totalEntries = filteredReturns.length;
+  const totalPages = Math.ceil(totalEntries / itemsPerPage) || 1;
+  const paginatedReturns = filteredReturns.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <RotateCcw className="text-indigo-600" /> Purchase Returns
-          </h1>
-          <p className="text-sm text-gray-500">
-            Manage returned items sent back to suppliers and refund claims.
-          </p>
-        </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors self-start md:self-auto">
-          <Plus size={16} /> New Return
-        </button>
-      </div>
+    <div className="animate-in fade-in duration-500">
+      <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
+        {/* Header & Filters */}
+        <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#eaf6f5] text-[#3a9898] flex items-center justify-center">
+              <RotateCcw size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#1a2632]">
+                Purchase Returns
+              </h2>
+              <p className="text-xs text-[#8b9bae]">
+                Manage returned items sent back to suppliers and refund claims.
+              </p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              title="Refresh Data"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
 
-      {/* Search Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
-        <div className="relative w-full md:w-96">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search return no, purchase no or supplier..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </div>
+          <div className="flex gap-4 items-center flex-wrap">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8b9bae]"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search return no, purchase..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-9 pr-4 py-2 bg-[#f5f7f8] border border-[#dde5e7] rounded-full text-xs text-[#1a2632] placeholder-[#8b9bae] focus:outline-none focus:border-[#3a9898] transition-colors"
+              />
+            </div>
 
-      {/* Returns Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                <th className="py-3 px-4">Return No</th>
-                <th className="py-3 px-4">Purchase No</th>
-                <th className="py-3 px-4">Supplier Name</th>
-                <th className="py-3 px-4">Quantity Returned</th>
-                <th className="py-3 px-4">Refund Amount</th>
-                <th className="py-3 px-4">Reason</th>
-                <th className="py-3 px-4">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 text-sm text-gray-700">
-              {filteredReturns.length > 0 ? (
-                filteredReturns.map((item) => (
+            <div className="w-px h-8 bg-[#dde5e7] mx-1 hidden sm:block"></div>
+
+            <button
+              onClick={() => alert("New Return Modal opened")}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              New Return
+            </button>
+          </div>
+        </div>
+
+        {/* Table Body */}
+        <div className="overflow-x-auto min-h-[300px]">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-3">
+              <Loader2 size={32} className="animate-spin text-[#3a9898]" />
+              <p className="text-xs font-semibold">
+                Loading purchase returns...
+              </p>
+            </div>
+          ) : paginatedReturns.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-2">
+              <p className="text-sm font-semibold text-[#1a2632]">
+                No Purchase Returns Found
+              </p>
+              <p className="text-xs">
+                Click "New Return" to initiate a supplier return request.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white border-b border-[#dde5e7]">
+                  <th className="py-4 pl-6 pr-4 w-12">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8]"
+                    />
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Return No ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Purchase No ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Supplier Name ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Quantity Returned ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Refund Amount ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Reason ↕
+                  </th>
+                  <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Date ↕
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#dde5e7]">
+                {paginatedReturns.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-[#f5f7f8] transition-colors group"
                   >
-                    <td className="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">
+                    <td className="py-4 pl-6 pr-4">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8] cursor-pointer"
+                      />
+                    </td>
+
+                    {/* Return No */}
+                    <td className="py-4 px-4 font-mono text-xs font-bold text-[#3a9898]">
                       {item.returnNo}
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-gray-600">
+
+                    {/* Purchase No */}
+                    <td className="py-4 px-4 font-mono text-xs font-bold text-[#3a9898]">
                       {item.purchaseNo}
                     </td>
-                    <td className="py-3 px-4 font-medium text-gray-900">
+
+                    {/* Supplier Name */}
+                    <td className="py-4 px-4 text-sm font-bold text-[#1a2632]">
                       {item.supplierName}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-red-600">
+
+                    {/* Quantity Returned */}
+                    <td className="py-4 px-4 text-sm font-bold text-rose-600">
                       {item.quantity} items
                     </td>
-                    <td className="py-3 px-4 font-bold text-emerald-600">
+
+                    {/* Refund Amount */}
+                    <td className="py-4 px-4 text-sm font-bold text-[#3a9898]">
                       ₹{item.refundAmount.toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{item.reason}</td>
-                    <td className="py-3 px-4 text-gray-500 text-xs flex items-center gap-1 mt-1">
-                      <Calendar size={14} /> {item.date}
+
+                    {/* Reason */}
+                    <td className="py-4 px-4 text-sm font-medium text-[#5a6a76]">
+                      {item.reason}
+                    </td>
+
+                    {/* Date */}
+                    <td className="py-4 px-6 text-sm text-[#5a6a76] whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar size={14} className="text-[#8b9bae]" />
+                        {item.date}
+                      </span>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-500">
-                    No purchase return records found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Dynamic Pagination Footer */}
+        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-sm text-[#5a6a76] flex-wrap gap-3">
+          <div>
+            Showing{" "}
+            {paginatedReturns.length === 0
+              ? 0
+              : (currentPage - 1) * itemsPerPage + 1}{" "}
+            to {Math.min(currentPage * itemsPerPage, totalEntries)} of{" "}
+            {totalEntries} entries
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1 || loading}
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+              (pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1 rounded font-medium transition-all ${
+                    currentPage === pageNum
+                      ? "bg-[#3a9898] text-white"
+                      : "hover:bg-[#f0f4f5]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ),
+            )}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={
+                currentPage === totalPages || loading || totalPages === 0
+              }
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default PurchaseReturns;
+}

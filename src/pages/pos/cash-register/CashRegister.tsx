@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   Wallet,
   Search,
@@ -8,7 +7,11 @@ import {
   Calendar,
   ArrowUpRight,
   DollarSign,
+  ChevronDown,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface CashRegisterSession {
   id: string;
@@ -54,177 +57,329 @@ const initialRegisters: CashRegisterSession[] = [
   },
 ];
 
-const CashRegister: React.FC = () => {
+export default function CashRegister() {
   const [registers, setRegisters] =
     useState<CashRegisterSession[]>(initialRegisters);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [loading, setLoading] = useState(false);
 
-  const filteredRegisters = registers.filter((item) => {
-    const matchesSearch =
-      item.registerNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.cashierName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "All" || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 600);
+  };
+
+  const filteredRegisters = useMemo(() => {
+    return registers.filter((item) => {
+      const matchesSearch =
+        item.registerNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.cashierName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === "All" || item.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [registers, searchTerm, statusFilter]);
+
+  // Pagination calculation
+  const totalEntries = filteredRegisters.length;
+  const totalPages = Math.ceil(totalEntries / itemsPerPage) || 1;
+  const paginatedRegisters = filteredRegisters.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Wallet className="text-indigo-600" /> Cash Register & Shifts
-          </h1>
-          <p className="text-sm text-gray-500">
-            Manage cashier opening/closing balances, cash drawers, and shift
-            logs.
-          </p>
-        </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors self-start md:self-auto">
-          <Plus size={16} /> Open New Register
-        </button>
-      </div>
-
+    <div className="animate-in fade-in duration-500">
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500 font-medium">
+            <p className="text-xs text-[#8b9bae] font-semibold uppercase tracking-wider">
               Current Drawer Status
             </p>
-            <h3 className="text-xl font-bold text-emerald-600 mt-1 flex items-center gap-1">
+            <h3 className="text-xl font-bold text-[#3a9898] mt-1 flex items-center gap-1.5">
               <Unlock size={18} /> Active (Open)
             </h3>
           </div>
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <div className="p-3 bg-[#eaf6f5] text-[#3a9898] rounded-xl">
             <Wallet size={24} />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
+
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500 font-medium">
+            <p className="text-xs text-[#8b9bae] font-semibold uppercase tracking-wider">
               Today's Cash Sales
             </p>
-            <h3 className="text-2xl font-bold text-gray-800 mt-1">
+            <h3 className="text-2xl font-bold text-[#1a2632] mt-1">
               ₹14,500.00
             </h3>
           </div>
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+          <div className="p-3 bg-[#eaf6f5] text-[#3a9898] rounded-xl">
             <ArrowUpRight size={24} />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
+
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500 font-medium">Opening Float</p>
-            <h3 className="text-2xl font-bold text-gray-800 mt-1">₹2,000.00</h3>
+            <p className="text-xs text-[#8b9bae] font-semibold uppercase tracking-wider">
+              Opening Float
+            </p>
+            <h3 className="text-2xl font-bold text-[#1a2632] mt-1">
+              ₹2,000.00
+            </h3>
           </div>
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+          <div className="p-3 bg-[#f0f4f5] text-[#5a6a76] rounded-xl">
             <DollarSign size={24} />
           </div>
         </div>
       </div>
 
-      {/* Search & Filter */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search by register no or cashier name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-300 px-3 py-2 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="All">All Status</option>
-            <option value="Open">Open</option>
-            <option value="Closed">Closed</option>
-          </select>
-        </div>
-      </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
+        {/* Header & Filters */}
+        <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#eaf6f5] text-[#3a9898] flex items-center justify-center">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#1a2632]">
+                Cash Register & Shifts
+              </h2>
+              <p className="text-xs text-[#8b9bae]">
+                Manage cashier opening/closing balances, cash drawers, and shift
+                logs.
+              </p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              title="Refresh Data"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
 
-      {/* Registers Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                <th className="py-3 px-4">Register No</th>
-                <th className="py-3 px-4">Cashier Name</th>
-                <th className="py-3 px-4">Opening Balance</th>
-                <th className="py-3 px-4">Cash Sales</th>
-                <th className="py-3 px-4">Closing Balance</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 text-sm text-gray-700">
-              {filteredRegisters.length > 0 ? (
-                filteredRegisters.map((item) => (
+          <div className="flex gap-4 items-center flex-wrap">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8b9bae]"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search register or cashier..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-9 pr-4 py-2 bg-[#f5f7f8] border border-[#dde5e7] rounded-full text-xs text-[#1a2632] placeholder-[#8b9bae] focus:outline-none focus:border-[#3a9898] transition-colors"
+              />
+            </div>
+
+            {/* Status Filter Dropdown */}
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="appearance-none px-4 py-2 pr-9 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-semibold rounded-full transition-colors border border-[#dde5e7] hover:border-[#b5d9d5] focus:outline-none cursor-pointer"
+              >
+                <option value="All">All Status</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b9bae] pointer-events-none"
+              />
+            </div>
+
+            <div className="w-px h-8 bg-[#dde5e7] mx-1 hidden sm:block"></div>
+
+            <button
+              onClick={() => alert("Open New Register Modal")}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Open New Register
+            </button>
+          </div>
+        </div>
+
+        {/* Table Body */}
+        <div className="overflow-x-auto min-h-[300px]">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-3">
+              <Loader2 size={32} className="animate-spin text-[#3a9898]" />
+              <p className="text-xs font-semibold">
+                Loading cash register logs...
+              </p>
+            </div>
+          ) : paginatedRegisters.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-[#8b9bae] gap-2">
+              <p className="text-sm font-semibold text-[#1a2632]">
+                No Cash Register Logs Found
+              </p>
+              <p className="text-xs">
+                Click "Open New Register" to start a shift.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white border-b border-[#dde5e7]">
+                  <th className="py-4 pl-6 pr-4 w-12">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8]"
+                    />
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Register No ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Cashier Name ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Opening Balance ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Cash Sales ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Closing Balance ↕
+                  </th>
+                  <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Status ↕
+                  </th>
+                  <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                    Date ↕
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#dde5e7]">
+                {paginatedRegisters.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-[#f5f7f8] transition-colors group"
                   >
-                    <td className="py-3 px-4 font-mono text-xs font-semibold text-indigo-600">
+                    <td className="py-4 pl-6 pr-4">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8] cursor-pointer"
+                      />
+                    </td>
+
+                    {/* Register No */}
+                    <td className="py-4 px-4 font-mono text-xs font-bold text-[#3a9898]">
                       {item.registerNo}
                     </td>
-                    <td className="py-3 px-4 font-medium text-gray-900">
+
+                    {/* Cashier Name */}
+                    <td className="py-4 px-4 text-sm font-bold text-[#1a2632]">
                       {item.cashierName}
                     </td>
-                    <td className="py-3 px-4 text-gray-600">
+
+                    {/* Opening Balance */}
+                    <td className="py-4 px-4 text-sm text-[#5a6a76]">
                       ₹{item.openingBalance.toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-emerald-600">
+
+                    {/* Cash Sales */}
+                    <td className="py-4 px-4 text-sm font-bold text-[#3a9898]">
                       +₹{item.cashSales.toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 font-bold text-gray-900">
+
+                    {/* Closing Balance */}
+                    <td className="py-4 px-4 text-sm font-bold text-[#1a2632]">
                       ₹{item.closingBalance.toFixed(2)}
                     </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-max ${
-                          item.status === "Open"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {item.status === "Open" ? (
-                          <Unlock size={12} />
-                        ) : (
-                          <Lock size={12} />
-                        )}
-                        {item.status}
-                      </span>
+
+                    {/* Status Badge */}
+                    <td className="py-4 px-4">
+                      {item.status === "Open" ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#eaf6f5] text-[#3a9898] text-xs font-bold border border-[#c4e4e0] capitalize">
+                          <Unlock size={14} strokeWidth={2.5} />
+                          {item.status}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f0f4f5] text-[#8b9bae] text-xs font-bold border border-[#dde5e7] capitalize">
+                          <Lock size={14} strokeWidth={2.5} />
+                          {item.status}
+                        </span>
+                      )}
                     </td>
-                    <td className="py-3 px-4 text-gray-500 text-xs flex items-center gap-1 mt-1">
-                      <Calendar size={14} /> {item.date}
+
+                    {/* Date */}
+                    <td className="py-4 px-6 text-sm text-[#5a6a76] whitespace-nowrap flex items-center gap-1.5 pt-5">
+                      <Calendar size={14} className="text-[#8b9bae]" />
+                      {item.date}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-500">
-                    No cash register logs found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Dynamic Pagination Footer */}
+        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-sm text-[#5a6a76] flex-wrap gap-3">
+          <div>
+            Showing{" "}
+            {paginatedRegisters.length === 0
+              ? 0
+              : (currentPage - 1) * itemsPerPage + 1}{" "}
+            to {Math.min(currentPage * itemsPerPage, totalEntries)} of{" "}
+            {totalEntries} entries
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1 || loading}
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(
+              (pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1 rounded font-medium transition-all ${
+                    currentPage === pageNum
+                      ? "bg-[#3a9898] text-white"
+                      : "hover:bg-[#f0f4f5]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ),
+            )}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={
+                currentPage === totalPages || loading || totalPages === 0
+              }
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default CashRegister;
+}
