@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import ProductModal, { ProductData } from "./ProductModal";
 
 interface Product {
   id: string;
@@ -82,8 +83,13 @@ export default function ProductsList() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductData | null>(
+    null,
+  );
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -94,6 +100,29 @@ export default function ProductsList() {
     setTimeout(() => {
       setLoading(false);
     }, 600);
+  };
+
+  // Add / Edit Success Handler
+  const handleModalSuccess = (savedData: ProductData) => {
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.id === savedData.id);
+      if (exists) {
+        // Update existing
+        return prev.map((p) =>
+          p.id === savedData.id ? (savedData as Product) : p,
+        );
+      } else {
+        // Add new
+        return [savedData as Product, ...prev];
+      }
+    });
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      setProducts(products.filter((p) => p.id !== id));
+    }
   };
 
   const filteredProducts = useMemo(() => {
@@ -115,14 +144,8 @@ export default function ProductsList() {
     currentPage * itemsPerPage,
   );
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      setProducts(products.filter((p) => p.id !== id));
-    }
-  };
-
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 font-sans">
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         {/* Header & Filters */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
@@ -141,7 +164,7 @@ export default function ProductsList() {
             <button
               onClick={handleRefresh}
               title="Refresh Data"
-              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2 cursor-pointer"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -192,15 +215,19 @@ export default function ProductsList() {
 
             <button
               onClick={() => alert("Export report triggered")}
-              className="flex items-center gap-2 px-4 py-2 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-bold rounded-full transition-all border border-[#dde5e7]"
+              className="flex items-center gap-2 px-4 py-2 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-bold rounded-full transition-all border border-[#dde5e7] cursor-pointer"
             >
               <Download size={16} strokeWidth={2.5} />
               Export
             </button>
 
+            {/* Add Product Button */}
             <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+              onClick={() => {
+                setSelectedProduct(null); // Add Mode
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20 cursor-pointer"
             >
               <Plus size={16} strokeWidth={2.5} />
               Add Product
@@ -328,20 +355,24 @@ export default function ProductsList() {
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          className="p-1.5 text-[#5a6a76] hover:text-[#3a9898] rounded-lg hover:bg-[#eaf6f5] transition-colors"
+                          className="p-1.5 text-[#5a6a76] hover:text-[#3a9898] rounded-lg hover:bg-[#eaf6f5] transition-colors cursor-pointer"
                           title="View"
                         >
                           <Eye size={16} />
                         </button>
                         <button
-                          className="p-1.5 text-[#5a6a76] hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
+                          onClick={() => {
+                            setSelectedProduct(product); // Edit Mode
+                            setIsModalOpen(true);
+                          }}
+                          className="p-1.5 text-[#5a6a76] hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer"
                           title="Edit"
                         >
                           <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDelete(product.id)}
-                          className="p-1.5 text-[#5a6a76] hover:text-[#e11d48] rounded-lg hover:bg-red-50 transition-colors"
+                          className="p-1.5 text-[#5a6a76] hover:text-[#e11d48] rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                           title="Delete"
                         >
                           <Trash2 size={16} />
@@ -369,7 +400,7 @@ export default function ProductsList() {
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1 || loading}
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Previous
             </button>
@@ -379,7 +410,7 @@ export default function ProductsList() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1 rounded font-medium transition-all cursor-pointer ${
                     currentPage === pageNum
                       ? "bg-[#3a9898] text-white"
                       : "hover:bg-[#f0f4f5]"
@@ -395,13 +426,21 @@ export default function ProductsList() {
               disabled={
                 currentPage === totalPages || loading || totalPages === 0
               }
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Next
             </button>
           </div>
         </div>
       </div>
+
+      {/* Product Add / Edit Modal Integration */}
+      <ProductModal
+        isOpen={isModalOpen}
+        initialData={selectedProduct}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import {
   Calendar,
   RefreshCw,
   Loader2,
+  X,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 
@@ -58,6 +61,16 @@ export default function LowStock() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<LowStockItem | null>(null);
+
+  // Form State inside Modal
+  const [reorderQty, setReorderQty] = useState<number>(50);
+  const [supplierNote, setSupplierNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
@@ -67,6 +80,36 @@ export default function LowStock() {
     setTimeout(() => {
       setLoading(false);
     }, 600);
+  };
+
+  // Open Reorder Modal
+  const handleOpenModal = (item: LowStockItem | null = null) => {
+    setSelectedItem(item);
+    setReorderQty(item ? item.alertQuantity * 2 : 50);
+    setSupplierNote("");
+    setSuccessMessage(null);
+    setIsModalOpen(true);
+  };
+
+  // Handle Reorder Submit
+  const handleReorderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      setSuccessMessage("Purchase order successfully sent to supplier!");
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSuccessMessage(null);
+      }, 1200);
+    } catch (err) {
+      alert("Failed to submit reorder. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredList = useMemo(() => {
@@ -86,8 +129,13 @@ export default function LowStock() {
     currentPage * itemsPerPage,
   );
 
+  const inputCls =
+    "w-full bg-[#f8fafb] border border-[#e2e8ed] rounded-[9px] px-3.5 py-2.5 text-[13px] text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898]/20 transition-all placeholder:text-[#b0bec8]";
+  const labelCls = "block text-[11.5px] font-semibold text-[#5a6a76] mb-1.5";
+  const reqStar = <span className="text-red-500 ml-0.5">*</span>;
+
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 font-sans">
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         {/* Header & Search */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
@@ -107,7 +155,7 @@ export default function LowStock() {
             <button
               onClick={handleRefresh}
               title="Refresh Data"
-              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2 cursor-pointer"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -135,8 +183,8 @@ export default function LowStock() {
             <div className="w-px h-8 bg-[#dde5e7] mx-1 hidden sm:block"></div>
 
             <button
-              onClick={() => alert("Reorder All Low Stock triggered")}
-              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+              onClick={() => handleOpenModal(null)}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20 cursor-pointer"
             >
               <ShoppingCart size={16} strokeWidth={2.5} />
               Reorder All Low Stock
@@ -243,8 +291,8 @@ export default function LowStock() {
                     {/* Action */}
                     <td className="py-4 px-6 text-center whitespace-nowrap">
                       <button
-                        onClick={() => alert(`Reorder item: ${item.name}`)}
-                        className="inline-flex items-center gap-1.5 bg-[#eaf6f5] text-[#3a9898] hover:bg-[#c4e4e0] px-3.5 py-1.5 rounded-md text-xs font-bold border border-[#c4e4e0] transition-colors"
+                        onClick={() => handleOpenModal(item)}
+                        className="inline-flex items-center gap-1.5 bg-[#eaf6f5] text-[#3a9898] hover:bg-[#c4e4e0] px-3.5 py-1.5 rounded-md text-xs font-bold border border-[#c4e4e0] transition-colors cursor-pointer"
                       >
                         <ShoppingCart size={14} strokeWidth={2.5} /> Reorder
                       </button>
@@ -270,7 +318,7 @@ export default function LowStock() {
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1 || loading}
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Previous
             </button>
@@ -280,7 +328,7 @@ export default function LowStock() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1 rounded font-medium transition-all cursor-pointer ${
                     currentPage === pageNum
                       ? "bg-[#3a9898] text-white"
                       : "hover:bg-[#f0f4f5]"
@@ -296,13 +344,113 @@ export default function LowStock() {
               disabled={
                 currentPage === totalPages || loading || totalPages === 0
               }
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Next
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── Reorder Purchase Modal ── */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white w-full max-w-[650px] rounded-[20px] shadow-2xl flex flex-col border border-[#e2e8ed] animate-in fade-in duration-200">
+            {/* Header */}
+            <div className="px-7 py-5 flex items-start justify-between shrink-0 border-b border-[#f0f4f5]">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-[#eaf6f5] flex items-center justify-center shrink-0">
+                  <ShoppingCart size={18} className="text-[#3a9898]" />
+                </div>
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#1a2632]">
+                    {selectedItem
+                      ? `Reorder - ${selectedItem.name}`
+                      : "Bulk Reorder All Low Stock"}
+                  </h2>
+                  <p className="text-[12px] text-[#8b9bae] mt-0.5">
+                    {selectedItem
+                      ? `Supplier: ${selectedItem.supplier} | Current Stock: ${selectedItem.currentStock} ${selectedItem.unit}`
+                      : "Send automated purchase requisitions to respective suppliers."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                type="button"
+                className="w-8 h-8 rounded-lg hover:bg-[#f0f4f5] flex items-center justify-center text-[#8b9bae] hover:text-[#1a2632] transition-colors shrink-0 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              id="reorder-modal-form"
+              onSubmit={handleReorderSubmit}
+              className="px-7 py-5 space-y-4"
+            >
+              {successMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-700 text-xs font-semibold">
+                  <CheckCircle2 size={16} />
+                  {successMessage}
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>Reorder Quantity{reqStar}</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  className={inputCls}
+                  value={reorderQty}
+                  onChange={(e) => setReorderQty(Number(e.target.value))}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Supplier Notes / Instructions
+                </label>
+                <textarea
+                  rows={3}
+                  className={`${inputCls} resize-none`}
+                  placeholder="Enter delivery urgency or purchase details..."
+                  value={supplierNote}
+                  onChange={(e) => setSupplierNote(e.target.value)}
+                />
+              </div>
+            </form>
+
+            {/* Footer */}
+            <div className="px-7 py-4 border-t border-[#f0f4f5] flex items-center justify-between shrink-0 bg-white rounded-b-[20px]">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setIsModalOpen(false)}
+                className="text-[12.5px] font-semibold text-[#8b9bae] hover:text-[#e11d48] transition-colors px-4 py-2.5 rounded-xl hover:bg-red-50 disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                form="reorder-modal-form"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <ShoppingCart size={15} />
+                )}
+                {isSubmitting ? "Submitting Order..." : "Confirm Reorder"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

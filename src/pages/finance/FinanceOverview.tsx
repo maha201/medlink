@@ -1,141 +1,171 @@
-import React from "react";
-import {
-  TrendingUp,
-  ArrowUpRight,
-  DollarSign,
-  Wallet,
-  ArrowDownRight,
-  CreditCard,
-} from "lucide-react";
+import React, { useState } from "react";
+import { Calendar, ChevronDown } from "lucide-react";
 
 export default function FinanceOverview() {
+  const [selectedMonth, setSelectedMonth] = useState("October 2026");
+  const [entryFilter, setEntryFilter] = useState("Both entries");
+
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Revenue Trend Chart Card */}
-        <div className="lg:col-span-2 bg-[#f5f7f8] p-5 rounded-2xl border border-[#dde5e7] space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-[#1a2632] flex items-center gap-1.5">
-              <TrendingUp size={16} className="text-[#3a9898]" /> Weekly Revenue
-              & Collection Trend
-            </h3>
-            <span className="text-[10px] text-[#8b9bae] font-semibold">
-              Updated live today
-            </span>
+    <div className="space-y-4 animate-in fade-in duration-300 font-sans">
+      {/* FILTER BAR: Month Selector & Entry Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+        <div className="flex items-center gap-2.5">
+          {/* Month Picker dropdown */}
+          <div className="flex items-center gap-2 bg-[#f5f7f8] px-3.5 py-1.5 rounded-xl border border-[#dde5e7] text-xs font-semibold text-[#1a2632] cursor-pointer hover:bg-[#eaf6f5] transition-all">
+            <Calendar size={14} className="text-[#3a9898]" />
+            <span>{selectedMonth}</span>
+            <ChevronDown size={14} className="text-[#8b9bae]" />
           </div>
 
-          <div className="h-44 flex items-end justify-between px-3 pt-6 bg-white rounded-xl border border-[#dde5e7]">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => (
-              <div
-                key={day}
-                className="flex flex-col items-center gap-1.5 w-full"
-              >
-                <div className="w-3/4 bg-[#eaf6f5] rounded-t relative h-32 flex items-end justify-center">
-                  <div
-                    className="w-full bg-[#3a9898] rounded-t transition-all"
-                    style={{ height: `${[40, 65, 50, 85, 95, 70, 60][i]}%` }}
-                  ></div>
-                </div>
-                <span className="text-[10px] font-bold text-[#5a6a76]">
-                  {day}
-                </span>
-              </div>
-            ))}
+          {/* Both Entries Filter */}
+          <div className="flex items-center gap-2 bg-[#f5f7f8] px-3.5 py-1.5 rounded-xl border border-[#dde5e7] text-xs font-semibold text-[#5a6a76] cursor-pointer hover:bg-[#eaf6f5] transition-all">
+            <span>{entryFilter}</span>
+            <ChevronDown size={14} className="text-[#8b9bae]" />
           </div>
         </div>
 
-        {/* Payment Channels Split */}
-        <div className="bg-[#f5f7f8] p-5 rounded-2xl border border-[#dde5e7] space-y-3">
-          <h3 className="text-xs font-bold text-[#1a2632]">
-            Realized Payment Split
-          </h3>
-          <div className="space-y-2.5">
-            {[
-              {
-                method: "UPI / QR Scanner",
-                share: "52%",
-                amount: "₹24,800",
-                color: "bg-[#3a9898]",
-              },
-              {
-                method: "Cash Drawer",
-                share: "28%",
-                amount: "₹12,450",
-                color: "bg-emerald-500",
-              },
-              {
-                method: "Credit / Debit Card",
-                share: "20%",
-                amount: "₹7,950",
-                color: "bg-purple-500",
-              },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-white p-3 rounded-xl border border-[#dde5e7] space-y-1"
-              >
-                <div className="flex justify-between text-xs font-bold text-[#1a2632]">
-                  <span>{item.method}</span>
-                  <span className="text-[#3a9898]">{item.amount}</span>
-                </div>
-                <div className="w-full bg-[#f0f4f5] h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${item.color}`}
-                    style={{ width: item.share }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+        <div className="flex items-center gap-2">
+          <button className="px-3.5 py-1.5 bg-white border border-[#dde5e7] text-[#1a2632] text-xs font-bold rounded-xl shadow-sm hover:bg-[#f5f7f8] transition-all">
+            Accounts
+          </button>
+        </div>
+      </div>
+
+      {/* 4 KPI CARDS (Matching Exact Layout & Colors) */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        {/* Card 1: Net Profit (Red Highlight Box) */}
+        <div className="bg-[#b93838] text-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-[11px] font-medium text-white/80">
+              Net profit - Oct 2026
+            </p>
+            <h3 className="text-xl font-black mt-1">₹-2,000.00</h3>
+          </div>
+          <div className="mt-4 text-[11px] font-semibold text-white/95">
+            Margin 0%
+          </div>
+        </div>
+
+        {/* Card 2: Income */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#8b9bae]">Income</p>
+            <h3 className="text-xl font-black text-emerald-600 mt-1">₹0.00</h3>
+          </div>
+          <div className="mt-4 text-[11px] text-[#8b9bae]">This month</div>
+        </div>
+
+        {/* Card 3: Expense */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#8b9bae]">Expense</p>
+            <h3 className="text-xl font-black text-[#1a2632] mt-1">
+              ₹2,000.00
+            </h3>
+          </div>
+          <div className="mt-4 text-[11px] text-[#8b9bae]">This month</div>
+        </div>
+
+        {/* Card 4: Cash & Bank Balance */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#8b9bae]">
+              Cash & bank balance
+            </p>
+            <h3 className="text-xl font-black text-[#1a2632] mt-1">₹0.00</h3>
+          </div>
+          <div className="mt-4 text-[11px] font-bold text-[#3a9898] cursor-pointer hover:underline">
+            0 accounts →
           </div>
         </div>
       </div>
 
-      {/* Quick Summary Snapshot Table */}
-      <div className="bg-white rounded-2xl border border-[#dde5e7] p-4">
-        <h3 className="text-xs font-bold text-[#1a2632] mb-3">
-          Recent Activity Snapshot
-        </h3>
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-[#dde5e7] text-[#8b9bae]">
-              <th className="pb-2">Transaction ID</th>
-              <th className="pb-2">Patient / Party</th>
-              <th className="pb-2">Type</th>
-              <th className="pb-2">Amount</th>
-              <th className="pb-2">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#f0f4f5]">
-            <tr className="hover:bg-[#f5f7f8]">
-              <td className="py-2.5 font-bold text-[#3a9898]">
-                MED-INV-2026-001
-              </td>
-              <td className="py-2.5 font-semibold text-[#1a2632]">
-                Ramesh Kumar
-              </td>
-              <td className="py-2.5 text-[#5a6a76]">Patient Invoice</td>
-              <td className="py-2.5 font-bold text-[#1a2632]">₹1,470</td>
-              <td className="py-2.5">
-                <span className="px-2 py-0.5 bg-[#eaf6f5] text-[#3a9898] rounded font-bold text-[10px]">
-                  Paid
+      {/* CHARTS & HEAD BREAKDOWNS SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Left 2 Cols: Income vs Expense Chart */}
+        <div className="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between min-h-[300px]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-bold text-[#1a2632]">
+                Income vs Expense
+              </h4>
+              <p className="text-[10px] text-[#8b9bae] mt-0.5">Last 6 months</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-bold">
+              <span className="flex items-center gap-1.5 text-emerald-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{" "}
+                Income
+              </span>
+              <span className="flex items-center gap-1.5 text-rose-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>{" "}
+                Expense
+              </span>
+            </div>
+          </div>
+
+          {/* Corrected Income vs Expense Vertical Bar Chart */}
+          <div className="flex items-end justify-between px-6 pt-10 pb-3 h-52 border-b border-[#f0f4f5] gap-3">
+            {[
+              { month: "May", inc: "h-0", exp: "h-0" },
+              { month: "Jun", inc: "h-0", exp: "h-0" },
+              { month: "Jul", inc: "h-6", exp: "h-36" },
+              { month: "Aug", inc: "h-4", exp: "h-0" },
+              { month: "Sep", inc: "h-0", exp: "h-0" },
+              { month: "Oct", inc: "h-0", exp: "h-6" },
+            ].map((item) => (
+              <div
+                key={item.month}
+                className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
+              >
+                <div className="w-full flex items-end justify-center gap-1.5 h-full">
+                  <div
+                    title="Income"
+                    className={`w-3.5 bg-emerald-500 rounded-t transition-all ${item.inc}`}
+                  ></div>
+                  <div
+                    title="Expense"
+                    className={`w-3.5 bg-rose-500 rounded-t transition-all ${item.exp}`}
+                  ></div>
+                </div>
+                <span className="text-[10px] font-semibold text-[#8b9bae]">
+                  {item.month}
                 </span>
-              </td>
-            </tr>
-            <tr className="hover:bg-[#f5f7f8]">
-              <td className="py-2.5 font-bold text-[#3a9898]">EXP-2026-001</td>
-              <td className="py-2.5 font-semibold text-[#1a2632]">
-                Metro Healthcare Estates
-              </td>
-              <td className="py-2.5 text-[#5a6a76]">Clinic Lease Rent</td>
-              <td className="py-2.5 font-bold text-rose-600">₹45,000</td>
-              <td className="py-2.5">
-                <span className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded font-bold text-[10px]">
-                  Disbursed
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right 1 Col: Income & Expense by Head */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between space-y-4">
+          <div>
+            <h4 className="text-xs font-bold text-[#1a2632]">Income by head</h4>
+            <p className="text-[11px] text-[#8b9bae] mt-2">
+              No income this period.
+            </p>
+          </div>
+
+          <div className="border-t border-[#f0f4f5] pt-3">
+            <h4 className="text-xs font-bold text-[#1a2632]">
+              Expense by head
+            </h4>
+            <div className="flex items-center justify-between mt-2.5 text-xs">
+              <span className="text-[#5a6a76] font-medium">
+                Medicine purchase
+              </span>
+              <span className="font-bold text-rose-600">₹2,000.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM SECTION: Dietitian-wise consultation revenue */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7]">
+        <h4 className="text-xs font-bold text-[#1a2632]">
+          Dietitian-wise consultation revenue
+        </h4>
+        <p className="text-[11px] text-[#8b9bae] mt-2">
+          No consultation payments this period.
+        </p>
       </div>
     </div>
   );

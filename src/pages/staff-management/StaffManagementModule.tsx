@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   UserCheck,
   CalendarCheck,
+  History,
   Building,
   RefreshCw,
   Loader2,
@@ -13,13 +14,15 @@ import {
 import StaffOverview from "./StaffOverview";
 import StaffDirectory from "./StaffDirectory";
 import AttendanceLeave from "./AttendanceLeave";
+import AttendanceHistory from "./AttendanceHistory";
 import DepartmentsDesignations from "./DepartmentsDesignations";
 
 type StaffTab =
   | "Overview"
-  | "Staff Directory"
-  | "Attendance & Leave"
-  | "Departments & Designations";
+  // | "Staff Directory"
+  | "Attendance"
+  | "Attendance History";
+// | "Departments & Designations";
 
 export default function StaffManagementModule() {
   const [activeTab, setActiveTab] = useState<StaffTab>("Overview");
@@ -43,8 +46,8 @@ export default function StaffManagementModule() {
               Staff Management
             </h1>
             <p className="text-xs text-[#8b9bae]">
-              Manage clinic personnel records, daily attendance, leave requests,
-              and departments.
+              Manage clinic personnel records, daily attendance, attendance
+              history, and departments.
             </p>
           </div>
           <button
@@ -71,21 +74,26 @@ export default function StaffManagementModule() {
         <div className="flex items-center px-4 py-2.5 border-b border-[#dde5e7] gap-2 overflow-x-auto bg-[#f5f7f8]">
           {[
             { id: "Overview", label: "Overview", icon: LayoutDashboard },
+            // {
+            //   id: "Staff Directory",
+            //   label: "Staff Directory",
+            //   icon: UserCheck,
+            // },
             {
-              id: "Staff Directory",
-              label: "Staff Directory",
-              icon: UserCheck,
-            },
-            {
-              id: "Attendance & Leave",
-              label: "Attendance & Leave",
+              id: "Attendance",
+              label: "Daily Attendance",
               icon: CalendarCheck,
             },
             {
-              id: "Departments & Designations",
-              label: "Departments & Designations",
-              icon: Building,
+              id: "Attendance History",
+              label: "Attendance History",
+              icon: History,
             },
+            // {
+            //   id: "Departments & Designations",
+            //   label: "Departments & Designations",
+            //   icon: Building,
+            // },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -121,11 +129,12 @@ export default function StaffManagementModule() {
           ) : (
             <div>
               {activeTab === "Overview" && <StaffOverview />}
-              {activeTab === "Staff Directory" && <StaffDirectory />}
-              {activeTab === "Attendance & Leave" && <AttendanceLeave />}
-              {activeTab === "Departments & Designations" && (
+              {/* {activeTab === "Staff Directory" && <StaffDirectory />} */}
+              {activeTab === "Attendance" && <AttendanceLeave />}
+              {activeTab === "Attendance History" && <AttendanceHistory />}
+              {/* {activeTab === "Departments & Designations" && (
                 <DepartmentsDesignations />
-              )}
+              )} */}
             </div>
           )}
         </div>

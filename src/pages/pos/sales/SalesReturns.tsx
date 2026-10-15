@@ -1,7 +1,6 @@
 import {
   Search,
   RotateCcw,
-  AlertCircle,
   Plus,
   CheckCircle2,
   Clock,
@@ -10,6 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import ProcessReturnModal, { ReturnItemData } from "./ProcessReturnModal"; // உங்களுடைய மாடல் ஃபைல் இருக்கும் பாதை
 
 interface ReturnItem {
   id: string;
@@ -51,6 +51,12 @@ export default function ReturnsManagement() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [loading, setLoading] = useState(false);
 
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState<ReturnItemData | null>(
+    null,
+  );
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
@@ -60,6 +66,24 @@ export default function ReturnsManagement() {
     setTimeout(() => {
       setLoading(false);
     }, 600);
+  };
+
+  // Success Handler to append or update data in table
+  const handleModalSuccess = (newData?: any) => {
+    // புதிய என்ட்ரியை டேபிளில் சேர்க்க (Simulation)
+    const newEntry: ReturnItem = {
+      id: `RET-${Math.floor(100 + Math.random() * 900)}`,
+      invoice: newData?.invoiceNo || "INV-2026-X",
+      customer: newData?.customerName || "Walk-in Customer",
+      item: newData?.returnedItems || "Returned Product",
+      qty: 1,
+      amount: `₹${newData?.refundAmount || 0}`,
+      reason: newData?.returnReason || "Defective",
+      status: "Processing",
+    };
+
+    setReturns([newEntry, ...returns]);
+    setIsModalOpen(false);
   };
 
   const filteredReturns = useMemo(() => {
@@ -84,7 +108,7 @@ export default function ReturnsManagement() {
   );
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 font-sans">
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         {/* Header & Filters */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
@@ -103,7 +127,7 @@ export default function ReturnsManagement() {
             <button
               onClick={handleRefresh}
               title="Refresh Data"
-              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2 cursor-pointer"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -150,9 +174,13 @@ export default function ReturnsManagement() {
 
             <div className="w-px h-8 bg-[#dde5e7] mx-1 hidden sm:block"></div>
 
+            {/* Process New Return Button */}
             <button
-              onClick={() => alert("Open Process New Return Modal")}
-              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+              onClick={() => {
+                setSelectedReturn(null); // Add mode-kku null enru set seyyavum
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20 cursor-pointer"
             >
               <Plus size={16} strokeWidth={2.5} />
               Process New Return
@@ -295,7 +323,7 @@ export default function ReturnsManagement() {
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1 || loading}
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Previous
             </button>
@@ -305,7 +333,7 @@ export default function ReturnsManagement() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1 rounded font-medium transition-all cursor-pointer ${
                     currentPage === pageNum
                       ? "bg-[#3a9898] text-white"
                       : "hover:bg-[#f0f4f5]"
@@ -321,13 +349,21 @@ export default function ReturnsManagement() {
               disabled={
                 currentPage === totalPages || loading || totalPages === 0
               }
-              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent"
+              className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7] disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
             >
               Next
             </button>
           </div>
         </div>
       </div>
+
+      {/* ── Process Return Modal Component Integration ── */}
+      <ProcessReturnModal
+        isOpen={isModalOpen}
+        initialData={selectedReturn}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 }
