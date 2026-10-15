@@ -74,6 +74,18 @@ const navItems: NavItem[] = [
     icon: FileText,
   },
   {
+    name: "Finance",
+    module: "APPOINTMENTS",
+    path: "/finance",
+    icon: FileText,
+  },
+  {
+    name: "Staff Management",
+    module: "APPOINTMENTS",
+    path: "/staff-management",
+    icon: FileText,
+  },
+  {
     name: "Doctors",
     module: "DOCTORS",
     path: "/doctors",
@@ -121,6 +133,7 @@ const navItems: NavItem[] = [
     path: "/reports",
     icon: FileText,
   },
+
   {
     name: "Team & Access",
     module: "TEAM_ACCESS",

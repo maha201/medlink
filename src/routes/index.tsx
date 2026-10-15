@@ -12,6 +12,9 @@ import ClinicSettingsPage from "@/components/settings/ClinicSettingsPage";
 import TreatmentPlanList from "@/pages/treatment-plan/TreatmentPlanList";
 import DoctorProfile from "@/pages/doctor-profile/DoctorProfilePage";
 import OpdTodayPage from "@/pages/OpdTodayPage/OpdTodayPage";
+import FinanceModule from "@/pages/finance/FinanceModule";
+import StaffManagementModule from "@/pages/staff-management/StaffManagementModule";
+
 
 // ── Layouts ────────────────────────────────────────────────
 const AuthLayout = lazy(() => import("@/components/layout/AuthLayout"));
@@ -96,6 +99,8 @@ const StaffList = lazy(() => import("@/pages/pos/staff/StaffList"));
 const StaffRoles = lazy(() => import("@/pages/pos/staff/Roles"));
 const StaffPermissions = lazy(() => import("@/pages/pos/staff/Permissions"));
 const PosSettings = lazy(() => import("@/pages/pos/settings/PosSettings"));
+const FinanaceModule = lazy(() => import("@/pages/finance/FinanceModule"));
+
 
 // ── Super Admin Pages ──────────────────────────────────────
 const SADashboardPage = lazy(
@@ -179,6 +184,9 @@ export const router = createBrowserRouter([
           { path: "/doctors", element: S(<DoctorsPage />) },
           { path: "/doctors/:id", element: S(<DoctorDetailPage />) },
           { path: "/appointments", element: S(<AppointmentsPage />) },
+          { path: "/finance", element: S(<FinanceModule />) },
+          { path: "/staff-management", element: S(<StaffManagementModule />) },
+
           {
             path: "/appointments/calendar",
             element: S(<AppointmentCalendarPage />),
