@@ -1,4 +1,11 @@
-import { useState, useRef, KeyboardEvent, ChangeEvent, FormEvent } from "react";
+import {
+  useState,
+  useRef,
+  KeyboardEvent,
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+} from "react";
 import {
   X,
   User,
@@ -48,30 +55,34 @@ const availableTimeSlots = [
 ];
 
 interface Props {
+  initialData?: any; // Edit seyyavendum enral indha data use aagum
   onClose?: () => void;
   onSuccess?: () => void;
 }
 
 export default function RegisterPatientModal({
+  initialData,
   onClose = () => {},
   onSuccess,
 }: Props) {
+  const isEditing = Boolean(initialData && initialData.id);
+
   // Form State
   const [formData, setFormData] = useState({
-    firstName: "Riya",
-    lastName: "Sharma",
-    dob: "1992-04-18",
+    firstName: "",
+    lastName: "",
+    dob: "",
     gender: "Female",
     bloodGroup: "O+",
     maritalStatus: "Single",
-    phone: "+91 98765 43210",
-    email: "riya.sharma@email.com",
-    nationalId: "4821-9034-7612",
-    streetAddress: "12, MG Road, Anna Nagar",
-    cityPostalCode: "Chennai - 600040",
-    emergencyContactName: "Arjun Sharma",
+    phone: "",
+    email: "",
+    nationalId: "",
+    streetAddress: "",
+    cityPostalCode: "",
+    emergencyContactName: "",
     emergencyRelationship: "Spouse",
-    emergencyPhone: "+91 87654 32109",
+    emergencyPhone: "",
     attendingDoctor: "Dr. Rizky Pratama — General Medicine",
     reasonForVisit: "Tooth Sensitivity",
     type: "In-Clinic",
@@ -79,15 +90,12 @@ export default function RegisterPatientModal({
   });
 
   const [intake, setIntake] = useState("consultation");
-  const [allergies, setAllergies] = useState<string[]>([
-    "Penicillin",
-    "Asthma",
-  ]);
+  const [allergies, setAllergies] = useState<string[]>([]);
   const [allergyInput, setAllergyInput] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Date & Time Slot state
-  const [appointmentDate, setAppointmentDate] = useState("2026-03-14");
+  const [appointmentDate, setAppointmentDate] = useState("");
   const [selectedSlot, setSelectedSlot] = useState("09:30 AM");
   const [fees, setFees] = useState("");
 
@@ -96,6 +104,43 @@ export default function RegisterPatientModal({
   const [error, setError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // InitialData irunthal, athai form-il load seyyum (Edit mode)
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        firstName:
+          initialData.firstName || initialData.name?.split(" ")[0] || "",
+        lastName:
+          initialData.lastName ||
+          initialData.name?.split(" ").slice(1).join(" ") ||
+          "",
+        dob: initialData.dateOfBirth || initialData.dob || "",
+        gender: initialData.gender || "Female",
+        bloodGroup: initialData.bloodGroup || "O+",
+        maritalStatus: initialData.maritalStatus || "Single",
+        phone: initialData.phone || "",
+        email: initialData.email || "",
+        nationalId: initialData.nationalId || "",
+        streetAddress: initialData.streetAddress || "",
+        cityPostalCode: initialData.cityPostalCode || "",
+        emergencyContactName: initialData.emergencyContactName || "",
+        emergencyRelationship: initialData.emergencyRelationship || "Spouse",
+        emergencyPhone: initialData.emergencyPhone || "",
+        attendingDoctor:
+          initialData.attendingDoctor || "Dr. Rizky Pratama — General Medicine",
+        reasonForVisit: initialData.reasonForVisit || "Tooth Sensitivity",
+        type: initialData.type || "In-Clinic",
+        source: initialData.source || "Walk-In",
+      });
+      setIntake(initialData.intakeType || "consultation");
+      setAllergies(initialData.allergies || []);
+      setPhotoPreview(initialData.photoUrl || initialData.photo || null);
+      setAppointmentDate(initialData.appointmentDate || "");
+      setSelectedSlot(initialData.selectedSlot || "09:30 AM");
+      setFees(initialData.fees || "");
+    }
+  }, [initialData]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -131,12 +176,11 @@ export default function RegisterPatientModal({
     setLoading(true);
     setError(null);
 
-    // Destructure dob and map it to dateOfBirth
     const { dob, ...restFormData } = formData;
 
     const payload = {
       ...restFormData,
-      dateOfBirth: dob, // Mapped to backend expectation
+      dateOfBirth: dob,
       intakeType: intake,
       allergies,
       photo: photoPreview,
@@ -146,8 +190,14 @@ export default function RegisterPatientModal({
     };
 
     try {
-      await apiFetch(API_ENDPOINTS.hospitalPatients, {
-        method: "POST",
+      const endpoint = isEditing
+        ? `${API_ENDPOINTS.hospitalPatients}/${initialData.id}`
+        : API_ENDPOINTS.hospitalPatients;
+
+      const method = isEditing ? "PUT" : "POST";
+
+      await apiFetch(endpoint, {
+        method,
         body: JSON.stringify(payload),
       });
 
@@ -155,7 +205,10 @@ export default function RegisterPatientModal({
       onClose();
     } catch (err: any) {
       setError(
-        err?.message || "Patient registration failed. Please try again.",
+        err?.message ||
+          (isEditing
+            ? "Patient update failed."
+            : "Patient registration failed."),
       );
     } finally {
       setLoading(false);
@@ -168,7 +221,7 @@ export default function RegisterPatientModal({
   const reqStar = <span className="text-red-500 ml-0.5">*</span>;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 font-sans">
       <form
         onSubmit={handleSubmit}
         className="bg-white w-full max-w-[1000px] max-h-[92vh] rounded-[20px] shadow-2xl flex flex-col border border-[#e2e8ed]"
@@ -182,23 +235,25 @@ export default function RegisterPatientModal({
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-[16px] font-bold text-[#1a2632]">
-                  Register New Patient
+                  {isEditing ? "Edit Patient Record" : "Register New Patient"}
                 </h2>
                 <span className="text-[10.5px] font-bold bg-[#eaf6f5] text-[#3a9898] border border-[#c4e4e0] px-2.5 py-1 rounded-full">
-                  New MRN: #PT-2026-
-                  {String(Math.floor(1000 + Math.random() * 9000))}
+                  {isEditing
+                    ? `MRN: #${initialData.mrn || initialData.id}`
+                    : `New MRN: #PT-2026-${String(Math.floor(1000 + Math.random() * 9000))}`}
                 </span>
               </div>
               <p className="text-[12px] text-[#8b9bae] mt-0.5">
-                Create a new electronic medical record (EMR / MRN) for hospital
-                intake and care tracking.
+                {isEditing
+                  ? "Update electronic medical record (EMR / MRN) details."
+                  : "Create a new electronic medical record (EMR / MRN) for hospital intake and care tracking."}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-[#f0f4f5] flex items-center justify-center text-[#8b9bae] hover:text-[#1a2632] transition-colors shrink-0"
+            className="w-8 h-8 rounded-lg hover:bg-[#f0f4f5] flex items-center justify-center text-[#8b9bae] hover:text-[#1a2632] transition-colors shrink-0 cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -250,7 +305,7 @@ export default function RegisterPatientModal({
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3a9898] hover:text-[#2b6e6e] transition-colors"
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-[#3a9898] hover:text-[#2b6e6e] transition-colors cursor-pointer"
                 >
                   <Upload size={11} /> Upload Photo
                 </button>
@@ -475,7 +530,7 @@ export default function RegisterPatientModal({
                       key={t.id}
                       type="button"
                       onClick={() => setIntake(t.id)}
-                      className={`flex flex-col items-center justify-center py-4 px-3 rounded-[12px] border transition-all ${
+                      className={`flex flex-col items-center justify-center py-4 px-3 rounded-[12px] border transition-all cursor-pointer ${
                         active
                           ? isEmergency
                             ? "border-red-400 bg-red-50/50 text-red-600"
@@ -633,7 +688,7 @@ export default function RegisterPatientModal({
                     <button
                       type="button"
                       onClick={() => removeAllergy(i)}
-                      className="hover:opacity-75 transition-opacity"
+                      className="hover:opacity-75 transition-opacity cursor-pointer"
                     >
                       <X size={12} />
                     </button>
@@ -703,7 +758,7 @@ export default function RegisterPatientModal({
                       key={slot}
                       type="button"
                       onClick={() => setSelectedSlot(slot)}
-                      className={`py-2.5 px-3 rounded-xl border text-[12.5px] font-semibold transition-all ${
+                      className={`py-2.5 px-3 rounded-xl border text-[12.5px] font-semibold transition-all cursor-pointer ${
                         isSelected
                           ? "bg-[#0d8a83] text-white border-[#0d8a83] shadow-sm"
                           : "bg-white text-[#1a2632] border-[#e2e8ed] hover:border-[#0d8a83]"
@@ -724,7 +779,7 @@ export default function RegisterPatientModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="text-[12.5px] font-semibold text-[#8b9bae] hover:text-[#e11d48] transition-colors px-4 py-2.5 rounded-xl hover:bg-red-50 disabled:opacity-50"
+            className="text-[12.5px] font-semibold text-[#8b9bae] hover:text-[#e11d48] transition-colors px-4 py-2.5 rounded-xl hover:bg-red-50 disabled:opacity-50 cursor-pointer"
           >
             Discard / Cancel
           </button>
@@ -732,14 +787,14 @@ export default function RegisterPatientModal({
             <button
               type="button"
               disabled={loading}
-              className="text-[12.5px] font-semibold text-[#5a6a76] border border-[#e2e8ed] hover:border-[#3a9898] hover:text-[#3a9898] px-5 py-2.5 rounded-xl transition-all bg-white disabled:opacity-50"
+              className="text-[12.5px] font-semibold text-[#5a6a76] border border-[#e2e8ed] hover:border-[#3a9898] hover:text-[#3a9898] px-5 py-2.5 rounded-xl transition-all bg-white disabled:opacity-50 cursor-pointer"
             >
               Save as Draft
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20 disabled:opacity-50"
+              className="flex items-center gap-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm shadow-[#3a9898]/20 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <Loader2 size={15} className="animate-spin" />
@@ -747,8 +802,12 @@ export default function RegisterPatientModal({
                 <CheckCircle2 size={15} />
               )}
               {loading
-                ? "Registering..."
-                : "Complete Registration & Create EMR"}
+                ? isEditing
+                  ? "Updating..."
+                  : "Registering..."
+                : isEditing
+                  ? "Update Patient Record"
+                  : "Complete Registration & Create EMR"}
             </button>
           </div>
         </div>

@@ -36,38 +36,6 @@ export default function StaffManagementModule() {
   return (
     <div className="animate-in fade-in duration-300 space-y-4 font-sans">
       {/* PAGE HEADER */}
-      <div className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#eaf6f5] text-[#3a9898] flex items-center justify-center">
-            <Users size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#1a2632]">
-              Staff Management
-            </h1>
-            <p className="text-xs text-[#8b9bae]">
-              Manage clinic personnel records, daily attendance, attendance
-              history, and departments.
-            </p>
-          </div>
-          <button
-            onClick={handleRefresh}
-            title="Refresh Data"
-            className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#f5f7f8] rounded-full transition-all ml-2"
-          >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => alert("Add Staff Modal Opened")}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
-          >
-            <Plus size={14} strokeWidth={2.5} /> Add Staff Member
-          </button>
-        </div>
-      </div>
 
       {/* HORIZONTAL IN-PAGE TABS */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">

@@ -119,12 +119,12 @@ const navItems: NavItem[] = [
     path: "/staff-management",
     icon: UserCog,
   },
-  {
-    name: "Team & Access",
-    module: "TEAM_ACCESS",
-    path: "/team-access",
-    icon: ShieldCheck,
-  },
+  // {
+  //   name: "Team & Access",
+  //   module: "TEAM_ACCESS",
+  //   path: "/team-access",
+  //   icon: ShieldCheck,
+  // },
   {
     name: "Doctors",
     module: "DOCTORS",
