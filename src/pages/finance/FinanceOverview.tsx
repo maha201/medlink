@@ -1,5 +1,28 @@
 import React, { useState } from "react";
 import { Calendar, ChevronDown } from "lucide-react";
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Tooltip,
+} from "recharts";
+
+// ── Dummy Data for Income vs Expense Chart ──
+const revenueData = [
+  { name: "Jan", income: 45000, expense: 22000 },
+  { name: "Feb", income: 52000, expense: 28000 },
+  { name: "Mar", income: 48000, expense: 25000 },
+  { name: "Apr", income: 61000, expense: 32000 },
+  { name: "May", income: 55000, expense: 30000 },
+  { name: "Jun", income: 67000, expense: 35000 },
+  { name: "Jul", income: 72000, expense: 40000 },
+  { name: "Aug", income: 68000, expense: 38000 },
+  { name: "Sep", income: 80000, expense: 42000 },
+  { name: "Oct", income: 75000, expense: 45000 },
+];
 
 export default function FinanceOverview() {
   const [selectedMonth, setSelectedMonth] = useState("October 2026");
@@ -25,24 +48,24 @@ export default function FinanceOverview() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="px-3.5 py-1.5 bg-white border border-[#dde5e7] text-[#1a2632] text-xs font-bold rounded-xl shadow-sm hover:bg-[#f5f7f8] transition-all">
+          <button className="px-3.5 py-1.5 bg-white border border-[#dde5e7] text-[#1a2632] text-xs font-bold rounded-xl shadow-sm hover:bg-[#f5f7f8] transition-all cursor-pointer">
             Accounts
           </button>
         </div>
       </div>
 
-      {/* 4 KPI CARDS (Matching Exact Layout & Colors) */}
+      {/* 4 KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        {/* Card 1: Net Profit (Red Highlight Box) */}
+        {/* Card 1: Net Profit */}
         <div className="bg-[#b93838] text-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
           <div>
             <p className="text-[11px] font-medium text-white/80">
               Net profit - Oct 2026
             </p>
-            <h3 className="text-xl font-black mt-1">₹-2,000.00</h3>
+            <h3 className="text-xl font-black mt-1">₹30,000.00</h3>
           </div>
           <div className="mt-4 text-[11px] font-semibold text-white/95">
-            Margin 0%
+            Margin 40%
           </div>
         </div>
 
@@ -50,7 +73,9 @@ export default function FinanceOverview() {
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
           <div>
             <p className="text-[11px] font-semibold text-[#8b9bae]">Income</p>
-            <h3 className="text-xl font-black text-emerald-600 mt-1">₹0.00</h3>
+            <h3 className="text-xl font-black text-emerald-600 mt-1">
+              ₹75,000.00
+            </h3>
           </div>
           <div className="mt-4 text-[11px] text-[#8b9bae]">This month</div>
         </div>
@@ -60,7 +85,7 @@ export default function FinanceOverview() {
           <div>
             <p className="text-[11px] font-semibold text-[#8b9bae]">Expense</p>
             <h3 className="text-xl font-black text-[#1a2632] mt-1">
-              ₹2,000.00
+              ₹45,000.00
             </h3>
           </div>
           <div className="mt-4 text-[11px] text-[#8b9bae]">This month</div>
@@ -72,10 +97,12 @@ export default function FinanceOverview() {
             <p className="text-[11px] font-semibold text-[#8b9bae]">
               Cash & bank balance
             </p>
-            <h3 className="text-xl font-black text-[#1a2632] mt-1">₹0.00</h3>
+            <h3 className="text-xl font-black text-[#1a2632] mt-1">
+              ₹1,20,000.00
+            </h3>
           </div>
           <div className="mt-4 text-[11px] font-bold text-[#3a9898] cursor-pointer hover:underline">
-            0 accounts →
+            2 accounts →
           </div>
         </div>
       </div>
@@ -83,55 +110,115 @@ export default function FinanceOverview() {
       {/* CHARTS & HEAD BREAKDOWNS SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Left 2 Cols: Income vs Expense Chart */}
-        <div className="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between min-h-[300px]">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-[#dde5e7] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <h4 className="text-xs font-bold text-[#1a2632]">
-                Income vs Expense
-              </h4>
-              <p className="text-[10px] text-[#8b9bae] mt-0.5">Last 6 months</p>
+              <h3 className="font-bold text-[#1a2632] text-sm">Revenue</h3>
+              <div className="flex gap-4 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#2C8C89]"></div>
+                  <span className="text-xs font-medium text-slate-500">
+                    Income
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#0F393B]"></div>
+                  <span className="text-xs font-medium text-slate-500">
+                    Expense
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-[10px] font-bold">
-              <span className="flex items-center gap-1.5 text-emerald-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{" "}
-                Income
-              </span>
-              <span className="flex items-center gap-1.5 text-rose-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>{" "}
-                Expense
-              </span>
-            </div>
+            <button className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg cursor-pointer">
+              Last Year <ChevronDown size={14} />
+            </button>
           </div>
 
-          {/* Corrected Income vs Expense Vertical Bar Chart */}
-          <div className="flex items-end justify-between px-6 pt-10 pb-3 h-52 border-b border-[#f0f4f5] gap-3">
-            {[
-              { month: "May", inc: "h-0", exp: "h-0" },
-              { month: "Jun", inc: "h-0", exp: "h-0" },
-              { month: "Jul", inc: "h-6", exp: "h-36" },
-              { month: "Aug", inc: "h-4", exp: "h-0" },
-              { month: "Sep", inc: "h-0", exp: "h-0" },
-              { month: "Oct", inc: "h-0", exp: "h-6" },
-            ].map((item) => (
-              <div
-                key={item.month}
-                className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
-              >
-                <div className="w-full flex items-end justify-center gap-1.5 h-full">
-                  <div
-                    title="Income"
-                    className={`w-3.5 bg-emerald-500 rounded-t transition-all ${item.inc}`}
-                  ></div>
-                  <div
-                    title="Expense"
-                    className={`w-3.5 bg-rose-500 rounded-t transition-all ${item.exp}`}
-                  ></div>
-                </div>
-                <span className="text-[10px] font-semibold text-[#8b9bae]">
-                  {item.month}
-                </span>
-              </div>
-            ))}
+          <div className="w-full h-56 flex items-center justify-center">
+            {revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={revenueData}
+                  margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="colorIncome"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="#2C8C89"
+                        stopOpacity={0.25}
+                      />
+                      <stop offset="95%" stopColor="#2C8C89" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient
+                      id="colorExpense"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="#0F393B"
+                        stopOpacity={0.25}
+                      />
+                      <stop offset="95%" stopColor="#0F393B" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#F1F5F9"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94A3B8", fontSize: 11 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94A3B8", fontSize: 11 }}
+                    tickFormatter={(v) => `₹${v / 1000}K`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8ed",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="expense"
+                    stroke="#0F393B"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorExpense)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="income"
+                    stroke="#2C8C89"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorIncome)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-xs text-slate-400">
+                No Revenue Data Available
+              </p>
+            )}
           </div>
         </div>
 
@@ -139,9 +226,10 @@ export default function FinanceOverview() {
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between space-y-4">
           <div>
             <h4 className="text-xs font-bold text-[#1a2632]">Income by head</h4>
-            <p className="text-[11px] text-[#8b9bae] mt-2">
-              No income this period.
-            </p>
+            <div className="flex items-center justify-between mt-2.5 text-xs">
+              <span className="text-[#5a6a76] font-medium">Pharmacy Sales</span>
+              <span className="font-bold text-emerald-600">₹75,000.00</span>
+            </div>
           </div>
 
           <div className="border-t border-[#f0f4f5] pt-3">
@@ -152,7 +240,7 @@ export default function FinanceOverview() {
               <span className="text-[#5a6a76] font-medium">
                 Medicine purchase
               </span>
-              <span className="font-bold text-rose-600">₹2,000.00</span>
+              <span className="font-bold text-rose-600">₹45,000.00</span>
             </div>
           </div>
         </div>
@@ -164,7 +252,7 @@ export default function FinanceOverview() {
           Dietitian-wise consultation revenue
         </h4>
         <p className="text-[11px] text-[#8b9bae] mt-2">
-          No consultation payments this period.
+          No consultation payments recorded for this period.
         </p>
       </div>
     </div>

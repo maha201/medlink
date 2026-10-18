@@ -6,10 +6,24 @@ import {
   Loader2,
   RefreshCw,
   Clock,
+  Eye,
+  Edit,
+  Trash2,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import BookAppointmentModal from "./BookAppointmentModal";
 import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Tooltip,
+} from "recharts";
 
 // Interface directly matching your API response object
 export interface AppointmentItem {
@@ -27,9 +41,21 @@ export interface AppointmentItem {
   gender?: string;
   age?: number;
   location?: string;
+  phone?: string;
   photoUrl?: string | null;
   [key: string]: any;
 }
+
+// Dummy data for top Trend chart matching the layout image
+const trendData = [
+  { name: "Mon", appointments: 25 },
+  { name: "Tue", appointments: 40 },
+  { name: "Wed", appointments: 20 },
+  { name: "Thu", appointments: 38 },
+  { name: "Fri", appointments: 35 },
+  { name: "Sat", appointments: 32 },
+  { name: "Sun", appointments: 45 },
+];
 
 export default function AppointmentsPage() {
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -51,17 +77,12 @@ export default function AppointmentsPage() {
         { method: "GET" },
       );
 
-      // Extract JSON response
       const res =
         typeof rawResponse.json === "function"
           ? await rawResponse.json()
           : rawResponse;
 
-      console.log("Parsed JSON Response:", res);
-
-      // Handle array or object with data array
       const dataList = Array.isArray(res) ? res : res?.data || [];
-
       setAppointments(dataList);
 
       const totalCount = res?.meta?.total ?? res?.total ?? dataList.length;
@@ -90,8 +111,14 @@ export default function AppointmentsPage() {
     fetchAppointments();
   };
 
+  const handleDelete = (id: number) => {
+    if (window.confirm("Are you sure you want to delete this appointment?")) {
+      setAppointments((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 font-sans">
       {showModal && (
         <BookAppointmentModal
           onClose={() => setShowModal(false)}
@@ -99,6 +126,213 @@ export default function AppointmentsPage() {
         />
       )}
 
+      {/* ── TOP 4 KPI SUMMARY CARDS (Matching Reference Layout) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1 */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[11.5px] font-semibold text-[#8b9bae]">
+                Today's Appointments
+              </p>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">52</h3>
+            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
+              <TrendingUp size={11} /> +2.45%
+            </span>
+          </div>
+          <p className="text-[11px] text-[#8b9bae] mt-3">
+            The available bed capacity is{" "}
+            <strong className="text-[#1a2632]">180</strong>
+          </p>
+        </div>
+
+        {/* Card 2 */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[11.5px] font-semibold text-[#8b9bae]">
+                Completed
+              </p>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">28</h3>
+            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
+              <TrendingUp size={11} /> +0.5%
+            </span>
+          </div>
+          <p className="text-[11px] text-[#8b9bae] mt-3">
+            The incomplete appointments are{" "}
+            <strong className="text-[#1a2632]">24</strong>
+          </p>
+        </div>
+
+        {/* Card 3 */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[11.5px] font-semibold text-[#8b9bae]">
+                Ongoing
+              </p>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">18</h3>
+            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10.5px] font-bold">
+              <TrendingUp size={11} className="rotate-180" /> -0.25%
+            </span>
+          </div>
+          <p className="text-[11px] text-[#8b9bae] mt-3">
+            The performance is <strong className="text-rose-600">slower</strong>{" "}
+            than yesterday
+          </p>
+        </div>
+
+        {/* Card 4 */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[11.5px] font-semibold text-[#8b9bae]">
+                Canceled
+              </p>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">6</h3>
+            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
+              <TrendingUp size={11} /> +1.3%
+            </span>
+          </div>
+          <p className="text-[11px] text-[#8b9bae] mt-3">
+            The performance is{" "}
+            <strong className="text-[#3a9898]">higher</strong> than yesterday
+          </p>
+        </div>
+      </div>
+
+      {/* ── APPOINTMENT TRENDS & TYPE CHARTS ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left: Trend Chart */}
+        <div className="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h3 className="font-bold text-[#1a2632] text-sm">
+                Appointment Trends
+              </h3>
+              <p className="text-xs text-[#8b9bae] mt-0.5">
+                Total Appointments:{" "}
+                <strong className="text-[#1a2632]">320</strong>
+              </p>
+            </div>
+            <button className="flex items-center gap-1.5 bg-[#f5f7f8] border border-[#dde5e7] text-[#5a6a76] text-xs font-semibold px-3 py-1.5 rounded-xl cursor-pointer">
+              This Week <ChevronDown size={14} />
+            </button>
+          </div>
+          <div className="w-full h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={trendData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3a9898" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3a9898" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#F1F5F9"
+                />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#94A3B8", fontSize: 11 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#94A3B8", fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8ed",
+                    fontSize: "12px",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="appointments"
+                  stroke="#3a9898"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorTrend)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Right: Appointment Type Breakdown */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-[#1a2632] text-sm">
+              Appointment Type
+            </h3>
+            <span className="text-xs text-[#8b9bae]">•••</span>
+          </div>
+          <div className="space-y-3.5 my-auto">
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-[#1a2632]">Consultation</span>
+                <span className="text-[#3a9898]">50% (26 Patients)</span>
+              </div>
+              <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#3a9898] rounded-full"
+                  style={{ width: "50%" }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-[#1a2632]">Follow-up</span>
+                <span className="text-[#3a9898]">25% (13 Patients)</span>
+              </div>
+              <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#3a9898]/80 rounded-full"
+                  style={{ width: "25%" }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-[#1a2632]">Surgery</span>
+                <span className="text-[#3a9898]">15% (8 Patients)</span>
+              </div>
+              <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#3a9898]/60 rounded-full"
+                  style={{ width: "15%" }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-[#1a2632]">Emergency</span>
+                <span className="text-[#3a9898]">10% (5 Patients)</span>
+              </div>
+              <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-rose-500 rounded-full"
+                  style={{ width: "10%" }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAIN APPOINTMENTS TABLE SECTION ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         {/* Header & Filters */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
@@ -107,7 +341,7 @@ export default function AppointmentsPage() {
             <button
               type="button"
               onClick={fetchAppointments}
-              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#eaf6f5] rounded-lg transition-colors"
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#eaf6f5] rounded-lg transition-colors cursor-pointer"
               title="Refresh"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -115,11 +349,11 @@ export default function AppointmentsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {["Gender", "Age", "Patient Type", "Condition"].map((filter) => (
+            {["This Week", "Source"].map((filter) => (
               <button
                 key={filter}
                 type="button"
-                className="flex items-center gap-2 px-4 py-2 bg-[#eaf6f5] hover:bg-[#d4efed] text-[#3a9898] text-xs font-semibold rounded-full transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-semibold rounded-full transition-colors border border-[#dde5e7] cursor-pointer"
               >
                 {filter}
                 <ChevronDown size={14} />
@@ -128,9 +362,9 @@ export default function AppointmentsPage() {
             <button
               type="button"
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20"
+              className="flex items-center gap-2 px-5 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-full transition-all shadow-sm shadow-[#3a9898]/20 cursor-pointer"
             >
-              <Plus size={14} strokeWidth={2.5} /> Book Appointment
+              <Plus size={14} strokeWidth={2.5} /> Add Appointment
             </button>
           </div>
         </div>
@@ -147,7 +381,7 @@ export default function AppointmentsPage() {
             <button
               type="button"
               onClick={fetchAppointments}
-              className="px-4 py-2 text-xs font-bold bg-[#eaf6f5] text-[#3a9898] rounded-md hover:bg-[#d4efed] transition-colors"
+              className="px-4 py-2 text-xs font-bold bg-[#eaf6f5] text-[#3a9898] rounded-md hover:bg-[#d4efed] transition-colors cursor-pointer"
             >
               Retry
             </button>
@@ -165,32 +399,29 @@ export default function AppointmentsPage() {
                     <th className="py-4 pl-6 pr-4 w-12">
                       <input
                         type="checkbox"
-                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8]"
+                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-[#f5f7f8] cursor-pointer"
                       />
                     </th>
                     <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
                       Name ↕
                     </th>
                     <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                      Gender / Age ↕
-                    </th>
-                    <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                      Symptoms / Priority ↕
+                      Phone Number ↕
                     </th>
                     <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
                       Doctor ↕
                     </th>
                     <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                      Type ↕
+                      Appointment Type ↕
                     </th>
                     <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                      Date & Time ↕
+                      Date ↕
                     </th>
-                    <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
-                      Location ↕
+                    <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
+                      Status ↕
                     </th>
                     <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
-                      Status ↕
+                      Actions ↕
                     </th>
                   </tr>
                 </thead>
@@ -210,7 +441,7 @@ export default function AppointmentsPage() {
                       {/* Patient Name & MRN */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#dde5e7] shrink-0 overflow-hidden flex items-center justify-center font-bold text-[#3a9898] text-sm bg-[#eaf6f5]">
+                          <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center font-bold text-[#3a9898] text-sm bg-[#eaf6f5]">
                             {row.photoUrl ? (
                               <img
                                 src={row.photoUrl}
@@ -232,90 +463,87 @@ export default function AppointmentsPage() {
                         </div>
                       </td>
 
-                      {/* Gender / Age */}
-                      <td className="py-4 px-4 text-sm text-[#5a6a76]">
-                        <span className="inline-flex items-center gap-1.5">
-                          {row.gender === "Female" ? (
-                            <span className="text-[#3a9898] font-bold">♀</span>
-                          ) : row.gender === "Male" ? (
-                            <span className="text-[#8b9bae] font-bold">♂</span>
-                          ) : null}
-                          {row.gender || row.age
-                            ? `${row.gender || ""} / ${row.age || ""}`
-                            : "—"}
-                        </span>
+                      {/* Phone Number */}
+                      <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
+                        {row.phone || "+91 98765-43210"}
                       </td>
 
-                      {/* Symptoms or Priority */}
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-semibold text-[#3a9898] capitalize">
-                          {row.symptoms || row.priority || "General"}
-                        </span>
-                      </td>
-
-                      {/* Doctor & Department */}
+                      {/* Doctor Name & Department */}
                       <td className="py-4 px-4">
                         <div className="text-sm font-bold text-[#1a2632]">
                           {row.doctorName || "—"}
                         </div>
                         <div className="text-xs text-[#8b9bae]">
-                          {row.departmentName || "—"}
+                          {row.departmentName || "General"}
                         </div>
                       </td>
 
                       {/* Appointment Type */}
-                      <td className="py-4 px-4 text-sm text-[#5a6a76] capitalize">
-                        {row.appointmentType || "—"}
+                      <td className="py-4 px-4 text-sm font-semibold text-[#1a2632] capitalize">
+                        {row.appointmentType || "Consultation"}
                       </td>
 
-                      {/* Date & Time Slot */}
+                      {/* Date & Time */}
                       <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
-                        <div>{row.appointmentDate || "—"}</div>
-                        {row.timeSlot && (
-                          <div className="text-xs text-[#8b9bae] flex items-center gap-1 mt-0.5">
-                            <Clock size={12} /> {row.timeSlot}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Location */}
-                      <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
-                        {row.location || "—"}
+                        <div>{row.appointmentDate || "12 March 2035"}</div>
+                        <div className="text-xs text-[#8b9bae] flex items-center gap-1 mt-0.5">
+                          <Clock size={12} /> {row.timeSlot || "09:00 - 09:30"}
+                        </div>
                       </td>
 
                       {/* Status Badge */}
-                      <td className="py-4 px-6 text-center">
-                        {row.status?.toLowerCase() === "discharged" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f0f4f5] text-[#8b9bae] text-xs font-bold border border-[#dde5e7] capitalize">
-                            <Info size={14} strokeWidth={2.5} />
-                            Discharged
-                          </span>
-                        )}
-                        {(row.status?.toLowerCase() === "scheduled" ||
-                          row.status?.toLowerCase() === "admitted") && (
+                      <td className="py-4 px-4 text-center">
+                        {row.status?.toLowerCase() === "completed" ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#eaf6f5] text-[#3a9898] text-xs font-bold border border-[#c4e4e0] capitalize">
                             <CheckCircle2 size={14} strokeWidth={2.5} />
-                            {row.status}
+                            Completed
                           </span>
-                        )}
-                        {(row.status?.toLowerCase() === "in treatment" ||
-                          row.status?.toLowerCase() === "in-progress") && (
+                        ) : row.status?.toLowerCase() === "ongoing" ||
+                          row.status?.toLowerCase() === "in treatment" ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#3a9898] text-white text-xs font-bold shadow-sm shadow-[#3a9898]/20 capitalize">
                             <Info size={14} strokeWidth={2.5} />
-                            {row.status}
+                            Ongoing
+                          </span>
+                        ) : row.status?.toLowerCase() === "canceled" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-50 text-rose-600 text-xs font-bold border border-rose-200 capitalize">
+                            Canceled
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-sky-50 text-sky-700 text-xs font-bold border border-sky-200 capitalize">
+                            {row.status || "Scheduled"}
                           </span>
                         )}
-                        {![
-                          "discharged",
-                          "scheduled",
-                          "admitted",
-                          "in treatment",
-                          "in-progress",
-                        ].includes(row.status?.toLowerCase()) && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f5f7f8] text-[#5a6a76] text-xs font-bold border border-[#dde5e7] capitalize">
-                            {row.status || "Pending"}
-                          </span>
-                        )}
+                      </td>
+
+                      {/* Action Buttons */}
+                      <td className="py-4 px-6 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() =>
+                              alert(`View details for ID: ${row.id}`)
+                            }
+                            className="p-1.5 text-[#5a6a76] hover:text-[#3a9898] rounded-lg hover:bg-[#eaf6f5] transition-colors cursor-pointer"
+                            title="View"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              alert(`Edit appointment ID: ${row.id}`)
+                            }
+                            className="p-1.5 text-[#5a6a76] hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            className="p-1.5 text-[#5a6a76] hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -334,7 +562,7 @@ export default function AppointmentsPage() {
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="px-3 py-1 rounded bg-[#f5f7f8] hover:bg-[#eaf6f5] disabled:opacity-50 transition-colors"
+                  className="px-3 py-1 rounded bg-[#f5f7f8] hover:bg-[#eaf6f5] disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   Previous
                 </button>
@@ -348,7 +576,7 @@ export default function AppointmentsPage() {
                   onClick={() =>
                     setCurrentPage((p) => Math.min(p + 1, totalPages))
                   }
-                  className="px-3 py-1 rounded bg-[#f5f7f8] hover:bg-[#eaf6f5] disabled:opacity-50 transition-colors"
+                  className="px-3 py-1 rounded bg-[#f5f7f8] hover:bg-[#eaf6f5] disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   Next
                 </button>

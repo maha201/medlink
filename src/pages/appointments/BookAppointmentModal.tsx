@@ -483,48 +483,6 @@ export default function BookAppointmentModal({ onClose, onSuccess }: Props) {
                 className="w-full bg-[#f8fafb] border border-[#e2e8ed] rounded-[9px] px-3.5 py-2.5 text-[13px] text-[#1a2632] focus:outline-none focus:border-[#3a9898] focus:ring-1 focus:ring-[#3a9898]/20 transition-all resize-none placeholder:text-[#b0bec8]"
               />
             </div>
-            <div>
-              <label className={labelCls}>Triage Priority Level:</label>
-              <div className="flex gap-2.5">
-                {priorities.map((p) => {
-                  const active = priority === p.id;
-                  const styles: Record<
-                    string,
-                    { active: string; inactive: string }
-                  > = {
-                    normal: {
-                      active: "bg-emerald-500 text-white border-emerald-500",
-                      inactive:
-                        "border-[#e2e8ed] text-[#5a6a76] hover:border-emerald-400 hover:text-emerald-600",
-                    },
-                    urgent: {
-                      active: "bg-amber-400 text-white border-amber-400",
-                      inactive:
-                        "border-[#e2e8ed] text-[#5a6a76] hover:border-amber-400 hover:text-amber-600",
-                    },
-                    high: {
-                      active: "bg-red-500 text-white border-red-500",
-                      inactive:
-                        "border-[#e2e8ed] text-[#5a6a76] hover:border-red-400 hover:text-red-600",
-                    },
-                  };
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setPriority(p.id)}
-                      className={`px-4 py-2 rounded-full text-[12px] font-semibold border-2 transition-all ${
-                        active
-                          ? styles[p.id].active
-                          : `bg-white ${styles[p.id].inactive}`
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
 

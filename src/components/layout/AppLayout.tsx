@@ -9,8 +9,10 @@ import {
   Bell,
   Settings,
   FileText,
+  ClipboardList,
   LogOut,
   UserCheck,
+  UserCog,
   Stethoscope,
   ShieldCheck,
   User,
@@ -19,6 +21,7 @@ import {
   ShoppingCart,
   ChevronDown,
   ChevronRight,
+  Activity,
   TrendingUp,
   ShoppingBag,
   Truck,
@@ -68,28 +71,29 @@ const navItems: NavItem[] = [
     icon: CalendarCheck,
   },
   {
+    name: "Patients",
+    module: "PATIENTS",
+    path: "/patients",
+    icon: Users,
+  },
+  {
+    name: "OPD - Today",
+    module: "CONSULTATION",
+    path: "/opd",
+    icon: Activity,
+  },
+  {
+    name: "Consultation",
+    module: "CONSULTATION",
+    path: "/consultation",
+    icon: Stethoscope,
+  },
+
+  {
     name: "Treatment Plan",
     module: "APPOINTMENTS",
     path: "/treatment-plan",
-    icon: FileText,
-  },
-  {
-    name: "Finance",
-    module: "APPOINTMENTS",
-    path: "/finance",
-    icon: FileText,
-  },
-  {
-    name: "Staff Management",
-    module: "APPOINTMENTS",
-    path: "/staff-management",
-    icon: FileText,
-  },
-  {
-    name: "Doctors",
-    module: "DOCTORS",
-    path: "/doctors",
-    icon: Stethoscope,
+    icon: ClipboardList,
   },
   {
     name: "Follow up",
@@ -98,22 +102,10 @@ const navItems: NavItem[] = [
     icon: Users,
   },
   {
-    name: "Consultation",
-    module: "CONSULTATION",
-    path: "/consultation",
-    icon: Stethoscope,
-  },
-  {
-    name: "OPD - Today",
-    module: "CONSULTATION",
-    path: "/opd",
-    icon: Stethoscope,
-  },
-  {
-    name: "Patients",
-    module: "PATIENTS",
-    path: "/patients",
-    icon: Users,
+    name: "Finance",
+    module: "APPOINTMENTS",
+    path: "/finance",
+    icon: DollarSign,
   },
   {
     name: "Visitors",
@@ -121,6 +113,25 @@ const navItems: NavItem[] = [
     path: "/visitors",
     icon: UserCheck,
   },
+  {
+    name: "Staff Management",
+    module: "APPOINTMENTS",
+    path: "/staff-management",
+    icon: UserCog,
+  },
+  {
+    name: "Team & Access",
+    module: "TEAM_ACCESS",
+    path: "/team-access",
+    icon: ShieldCheck,
+  },
+  {
+    name: "Doctors",
+    module: "DOCTORS",
+    path: "/doctors",
+    icon: Stethoscope,
+  },
+
   {
     name: "Inventory",
     module: "INVENTORY",
@@ -131,15 +142,9 @@ const navItems: NavItem[] = [
     name: "Reports",
     module: "REPORTS",
     path: "/reports",
-    icon: FileText,
+    icon: PieChart,
   },
 
-  {
-    name: "Team & Access",
-    module: "TEAM_ACCESS",
-    path: "/team-access",
-    icon: ShieldCheck,
-  },
   {
     name: "Clinic Settings",
     module: "CLINIC_SETTINGS",
