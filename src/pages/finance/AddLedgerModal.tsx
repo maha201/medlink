@@ -1,5 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import { X, BookOpen, CheckCircle2, Loader2, IndianRupee } from "lucide-react";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 interface Props {
   onClose: () => void;
@@ -25,7 +26,7 @@ export default function AddLedgerModal({ onClose, onSuccess }: Props) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -40,20 +41,40 @@ export default function AddLedgerModal({ onClose, onSuccess }: Props) {
     const debitVal = formData.entryType === "debit" ? numAmount : 0;
     const creditVal = formData.entryType === "credit" ? numAmount : 0;
 
-    setTimeout(() => {
-      if (onSuccess) {
-        onSuccess({
-          id: `LED-${Math.floor(10 + Math.random() * 90)}`,
+    try {
+      const res = await apiFetch(API_ENDPOINTS.hospitalFinanceLedger, {
+        method: "POST",
+        body: JSON.stringify({
           date: formData.date,
           particulars: formData.particulars,
           voucherType: formData.voucherType,
           debit: debitVal,
           credit: creditVal,
-        });
+        }),
+      });
+
+      const data = typeof res?.json === "function" ? await res.json() : res;
+
+      if (data?.success || res?.ok) {
+        if (onSuccess) {
+          onSuccess(data?.data || {
+            id: `LED-${Math.floor(10 + Math.random() * 90)}`,
+            date: formData.date,
+            particulars: formData.particulars,
+            voucherType: formData.voucherType,
+            debit: debitVal,
+            credit: creditVal,
+          });
+        }
+        onClose();
+      } else {
+        setError(data?.message || "Failed to record journal entry.");
       }
+    } catch (err: any) {
+      setError(err?.message || "Failed to record journal entry.");
+    } finally {
       setLoading(false);
-      onClose();
-    }, 400);
+    }
   };
 
   const inputCls =

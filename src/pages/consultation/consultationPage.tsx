@@ -3,6 +3,22 @@ import { UserPlus, ChevronDown, Play, Loader2, ArrowLeft } from "lucide-react";
 import AddConsultationModal from "./AddConsultationModal";
 import PatientConsultationView from "./ConsultationView"; // View component import
 import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
+import RegisterPatientModal from "../patients/AddPatientPage";
+
+interface Patient {
+  id: number;
+  mrn?: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  bloodGroup?: string;
+  phone?: string;
+  appointmentDate?: string;
+  status?: string;
+  photoUrl?: string | null;
+  [key: string]: any;
+}
 
 export interface ConsultationRecord {
   id: string;
@@ -103,6 +119,46 @@ export default function ConsultationPage() {
       setSelectedIds([]);
     }
   };
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [totalEntries, setTotalEntries] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const fetchPatients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rawResponse = await apiFetch(
+        `${API_ENDPOINTS.hospitalPatients}?page=${currentPage}&limit=10`,
+        { method: "GET" },
+      );
+
+      const res =
+        typeof rawResponse.json === "function"
+          ? await rawResponse.json()
+          : rawResponse;
+
+      const dataList = Array.isArray(res) ? res : res?.data || [];
+      setPatients(dataList);
+
+      const totalCount = res?.meta?.total ?? res?.total ?? dataList.length;
+      const totalPagesCount =
+        (res?.meta?.last_page ??
+          res?.totalPages ??
+          Math.ceil(totalCount / 10)) ||
+        1;
+
+      setTotalEntries(totalCount);
+      setTotalPages(totalPagesCount);
+    } catch (err: any) {
+      console.error("Fetch Patients Error:", err);
+      setError(err?.message || "Patients data-vai load seyyavillai.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
   const handleSelectRow = (
     id: string,
@@ -139,10 +195,20 @@ export default function ConsultationPage() {
   // 2. DEFAULT CONSULTATION LIST SCREEN
   return (
     <div className="animate-in fade-in duration-500">
-      {showModal && (
+      {/* {showModal && (
         <AddConsultationModal
           onClose={() => setShowModal(false)}
           onAddConsultation={() => fetchConsultations()}
+        />
+      )} */}
+      {showModal && (
+        <RegisterPatientModal
+          initialData={() => {}}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            fetchPatients();
+            setShowModal(false);
+          }}
         />
       )}
 

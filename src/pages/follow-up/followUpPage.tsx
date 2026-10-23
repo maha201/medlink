@@ -1,134 +1,104 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  CalendarPlus,
   ArrowUpDown,
-  ChevronDown,
-  CheckCircle,
+  MessageSquare,
+  UserCheck,
+  AlertCircle,
+  CheckCircle2,
+  Check,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import AddFollowUpModal from "./AddFollowUpModal";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
-interface FollowUpRecord {
+export interface FollowUpRecord {
   id: string;
   name: string;
   patientId: string;
-  gender: "female" | "male";
-  age: number;
   reason: string;
   doctor: string;
   specialty: string;
-  previousVisit: string;
   followUpDate: string;
-  followUpTime: string;
   location: string;
-  status: "Due Today" | "Scheduled" | "Completed" | "Overdue";
-  highlight?: boolean;
+  status: "Missed" | "Due Soon" | "Completed";
+  notes?: string;
 }
 
-const initialFollowUps: FollowUpRecord[] = [
-  {
-    id: "1",
-    name: "Alicia Perth",
-    patientId: "PT-2035-001",
-    gender: "female",
-    age: 34,
-    reason: "Post Tooth Extraction Review",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    previousVisit: "Sep 12, 2026",
-    followUpDate: "Today",
-    followUpTime: "02:30 PM",
-    location: "ICU 02 - 1st Floor",
-    status: "Due Today",
-  },
-  {
-    id: "2",
-    name: "Bima Kurnia",
-    patientId: "PT-2035-024",
-    gender: "male",
-    age: 29,
-    reason: "Gum Bleeding Follow-up",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    previousVisit: "Sep 10, 2026",
-    followUpDate: "Sep 22, 2026",
-    followUpTime: "11:00 AM",
-    location: "ICU 02 - 1st Floor",
-    status: "Scheduled",
-  },
-  {
-    id: "3",
-    name: "Clara Wright",
-    patientId: "PT-2035-053",
-    gender: "female",
-    age: 7,
-    reason: "Pediatric Dental Check",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    previousVisit: "Sep 05, 2026",
-    followUpDate: "Sep 18, 2026",
-    followUpTime: "10:00 AM",
-    location: "ICU 02 - 1st Floor",
-    status: "Completed",
-  },
-  {
-    id: "4",
-    name: "Daniel Wong",
-    patientId: "PT-2035-078",
-    gender: "male",
-    age: 42,
-    reason: "Root Canal Follow-up",
-    doctor: "Dr. Sriram",
-    specialty: "Dentist",
-    previousVisit: "Sep 01, 2026",
-    followUpDate: "Sep 15, 2026",
-    followUpTime: "04:00 PM",
-    location: "Room 402B - 4th Floor",
-    status: "Overdue",
-    highlight: true, // Selected highlight matching your image style
-  },
-];
-
 export default function FollowUpPage() {
-  const [records, setRecords] = useState<FollowUpRecord[]>(initialFollowUps);
+  const [records, setRecords] = useState<FollowUpRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<
-    "all" | "today" | "pending" | "completed"
-  >("all");
+  const [activeTab, setActiveTab] = useState<"all" | "due" | "missed">("all");
   const [showModal, setShowModal] = useState(false);
-
-  const handleAddFollowUp = (data: any) => {
-    const newEntry: FollowUpRecord = {
-      id: String(Date.now()),
-      name: data.name || "Patient Name",
-      patientId:
-        data.patientId || `PT-2035-${Math.floor(100 + Math.random() * 900)}`,
-      gender: data.genderAge?.toLowerCase().includes("female")
-        ? "female"
-        : "male",
-      age: parseInt(data.genderAge?.replace(/\D/g, "")) || 30,
-      reason: data.reason || "General Follow-up",
-      doctor: data.doctor || "Dr. Sriram",
-      specialty: data.specialty || "Dentist",
-      previousVisit: data.previousVisit || "Sep 14, 2026",
-      followUpDate: data.followUpDate || "Today",
-      followUpTime: data.followUpTime || "03:00 PM",
-      location: data.location || "Room 101",
-      status: "Scheduled",
-    };
-    setRecords([newEntry, ...records]);
-  };
-
-  const filteredRecords = records.filter((rec) => {
-    if (activeTab === "today") return rec.status === "Due Today";
-    if (activeTab === "pending")
-      return rec.status === "Scheduled" || rec.status === "Overdue";
-    if (activeTab === "completed") return rec.status === "Completed";
-    return true;
+  const [loading, setLoading] = useState(false);
+  const [tabCounts, setTabCounts] = useState({
+    allCount: 0,
+    dueSoonCount: 0,
+    missedCount: 0,
   });
 
+  const fetchFollowUps = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(
+        `${API_ENDPOINTS.hospitalFollowUps}?tab=${activeTab}&limit=50`,
+        { method: "GET" },
+      );
+      const data = typeof res?.json === "function" ? await res.json() : res;
+
+      if (data?.data) {
+        setRecords(data.data);
+      } else if (Array.isArray(data)) {
+        setRecords(data);
+      }
+
+      if (data?.meta) {
+        setTabCounts({
+          allCount: data.meta.allCount ?? 0,
+          dueSoonCount: data.meta.dueSoonCount ?? 0,
+          missedCount: data.meta.missedCount ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching follow-ups:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchFollowUps();
+  }, [fetchFollowUps]);
+
+  const handleAddFollowUp = async (data: any) => {
+    try {
+      await apiFetch(API_ENDPOINTS.hospitalFollowUps, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      setShowModal(false);
+      fetchFollowUps();
+    } catch (err) {
+      console.error("Failed to add follow up:", err);
+    }
+  };
+
+  const handleMarkCompleted = async (id: string) => {
+    try {
+      await apiFetch(`${API_ENDPOINTS.hospitalFollowUps}/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "Completed" }),
+      });
+      fetchFollowUps();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
+  // Fixed to use `records` instead of `filteredRecords`
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(filteredRecords.map((r) => r.id));
+      setSelectedIds(records.map((r) => r.id));
     } else {
       setSelectedIds([]);
     }
@@ -140,21 +110,12 @@ export default function FollowUpPage() {
     );
   };
 
+  // Fixed to use `records` instead of `filteredRecords`
   const isAllSelected =
-    filteredRecords.length > 0 &&
-    filteredRecords.every((r) => selectedIds.includes(r.id));
-
-  const markCompleted = (id: string) => {
-    setRecords((prev) =>
-      prev.map((rec) =>
-        rec.id === id ? { ...rec, status: "Completed", highlight: false } : rec,
-      ),
-    );
-  };
+    records.length > 0 && records.every((r) => selectedIds.includes(r.id));
 
   return (
-    <div className="animate-in fade-in duration-500">
-      {/* Follow-up Modal */}
+    <div className="animate-in fade-in duration-500 font-sans p-2">
       {showModal && (
         <AddFollowUpModal
           onClose={() => setShowModal(false)}
@@ -165,69 +126,55 @@ export default function FollowUpPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
         {/* Header Bar */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-col lg:flex-row gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-[#1a2632]">
-              Patient Follow-ups
-            </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-[#3a9898]">Follow-ups</h2>
+            <button
+              onClick={fetchFollowUps}
+              disabled={loading}
+              className="p-1.5 text-[#8b9bae] hover:text-[#3a9898] hover:bg-[#eaf6f5] rounded-lg transition-colors cursor-pointer"
+              title="Refresh"
+            >
+              <RefreshCw
+                size={15}
+                className={loading ? "animate-spin text-[#3a9898]" : ""}
+              />
+            </button>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Tab Filter Pills */}
-            <div className="bg-[#f0f4f5] p-1 rounded-full flex items-center gap-1 text-xs font-semibold">
+            {/* Tab filter buttons */}
+            <div className="bg-[#eaf6f5] p-1 rounded-full flex items-center gap-1 text-xs font-semibold">
               <button
                 onClick={() => setActiveTab("all")}
-                className={`px-3.5 py-1.5 rounded-full transition-all ${
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
                   activeTab === "all"
-                    ? "bg-white text-[#3a9898] shadow-sm"
+                    ? "bg-white text-[#3a9898] shadow-xs font-bold"
                     : "text-[#5a6a76] hover:text-[#1a2632]"
                 }`}
               >
-                All ({records.length})
+                All ({tabCounts.allCount})
               </button>
               <button
-                onClick={() => setActiveTab("today")}
-                className={`px-3.5 py-1.5 rounded-full transition-all ${
-                  activeTab === "today"
-                    ? "bg-white text-[#3a9898] shadow-sm"
+                onClick={() => setActiveTab("due")}
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  activeTab === "due"
+                    ? "bg-white text-[#3a9898] shadow-xs font-bold"
                     : "text-[#5a6a76] hover:text-[#1a2632]"
                 }`}
               >
-                Due Today (
-                {records.filter((r) => r.status === "Due Today").length})
+                Due Soon ({tabCounts.dueSoonCount})
               </button>
               <button
-                onClick={() => setActiveTab("pending")}
-                className={`px-3.5 py-1.5 rounded-full transition-all ${
-                  activeTab === "pending"
-                    ? "bg-white text-[#3a9898] shadow-sm"
+                onClick={() => setActiveTab("missed")}
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  activeTab === "missed"
+                    ? "bg-white text-[#3a9898] shadow-xs font-bold"
                     : "text-[#5a6a76] hover:text-[#1a2632]"
                 }`}
               >
-                Pending
+                Missed ({tabCounts.missedCount})
               </button>
             </div>
-
-            {/* Filter Badges */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
-                <span>Doctor</span>
-                <ChevronDown size={14} />
-              </div>
-
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#eaf6f5] text-[#3a9898] rounded-full text-xs font-semibold border border-[#c4e4e0] cursor-pointer hover:bg-[#d8efed] transition-colors">
-                <span>Status</span>
-                <ChevronDown size={14} />
-              </div>
-            </div>
-
-            {/* Add Schedule Button */}
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3a9898] hover:bg-[#2b6e6e] text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-[#3a9898]/20"
-            >
-              <CalendarPlus size={15} strokeWidth={2.5} />
-              Schedule Follow-up
-            </button>
           </div>
         </div>
 
@@ -235,8 +182,8 @@ export default function FollowUpPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8fafb] border-b border-[#dde5e7]">
-                <th className="py-4 pl-6 pr-4 w-12">
+              <tr className="bg-[#f5f5f5] border-b border-[#e2e8ed]">
+                <th className="py-3.5 pl-6 pr-4 w-12">
                   <input
                     type="checkbox"
                     onChange={handleSelectAll}
@@ -244,176 +191,180 @@ export default function FollowUpPage() {
                     className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
                   />
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Patient Name <ArrowUpDown size={12} />
+                    Name <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Gender / Age <ArrowUpDown size={12} />
+                    Reason for visit{" "}
+                    <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Follow-up Reason <ArrowUpDown size={12} />
+                    Doctor <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Doctor <ArrowUpDown size={12} />
+                    Follow-up Date & Time{" "}
+                    <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Last Visit <ArrowUpDown size={12} />
+                    Location{" "}
+                    <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-4 text-xs font-semibold text-[#5a6a76] whitespace-nowrap">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Follow-up Date & Time <ArrowUpDown size={12} />
+                    Status <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-xs font-medium text-[#8b9bae] whitespace-nowrap">
+                <th className="py-3.5 px-6 text-xs font-semibold text-[#5a6a76] whitespace-nowrap text-left">
                   <div className="flex items-center gap-1 cursor-pointer">
-                    Location <ArrowUpDown size={12} />
-                  </div>
-                </th>
-                <th className="py-4 px-6 text-xs font-medium text-[#8b9bae] whitespace-nowrap text-center">
-                  <div className="flex items-center justify-center gap-1 cursor-pointer">
-                    Action / Status <ArrowUpDown size={12} />
+                    Action <ArrowUpDown size={12} className="text-[#8b9bae]" />
                   </div>
                 </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-[#eef3f5]">
-              {filteredRecords.map((row) => {
-                const isSelected = selectedIds.includes(row.id);
-                return (
-                  <tr
-                    key={row.id}
-                    className={`transition-colors ${
-                      row.highlight
-                        ? "bg-[#f2faf9] hover:bg-[#eaf6f5]"
-                        : "hover:bg-[#f8fafb]"
-                    }`}
-                  >
-                    <td className="py-4 pl-6 pr-4">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectRow(row.id)}
-                        className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+              {loading && records.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-[#8b9bae]">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2
+                        size={18}
+                        className="animate-spin text-[#3a9898]"
                       />
-                    </td>
+                      <span className="text-xs">
+                        Loading follow-up records...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : records.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="py-12 text-center text-[#8b9bae] text-xs"
+                  >
+                    No follow-up records found.
+                  </td>
+                </tr>
+              ) : (
+                records.map((row) => {
+                  const isSelected = selectedIds.includes(row.id);
+                  return (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-[#f8fafb] transition-colors"
+                    >
+                      <td className="py-4 pl-6 pr-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectRow(row.id)}
+                          className="w-4 h-4 rounded border-[#dde5e7] text-[#3a9898] focus:ring-[#3a9898] bg-white cursor-pointer accent-[#3a9898]"
+                        />
+                      </td>
 
-                    {/* Patient Name & ID */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#c8d8dc] shrink-0 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
-                          {row.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-[#1a2632]">
-                            {row.name}
+                      {/* Name & Patient ID */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-[#c8d8dc] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                            {row.name ? row.name.charAt(0) : "P"}
                           </div>
-                          <div className="text-xs text-[#8b9bae]">
-                            #{row.patientId}
+                          <div>
+                            <div className="text-xs font-bold text-[#1a2632]">
+                              {row.name}
+                            </div>
+                            <div className="text-[11px] text-[#8b9bae]">
+                              #{row.patientId}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Gender / Age */}
-                    <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
-                      {row.gender === "female" ? "♀" : "♂"} / {row.age}
-                    </td>
+                      {/* Reason for visit */}
+                      <td className="py-4 px-4 text-xs font-semibold text-[#3a9898]">
+                        {row.reason}
+                      </td>
 
-                    {/* Follow-up Reason */}
-                    <td className="py-4 px-4 text-xs font-bold text-[#3a9898]">
-                      {row.reason}
-                    </td>
+                      {/* Doctor */}
+                      <td className="py-4 px-4">
+                        <div className="text-xs font-bold text-[#1a2632]">
+                          {row.doctor}
+                        </div>
+                        <div className="text-[10.5px] text-[#8b9bae]">
+                          {row.specialty}
+                        </div>
+                      </td>
 
-                    {/* Doctor */}
-                    <td className="py-4 px-4">
-                      <div className="text-xs font-bold text-[#1a2632]">
-                        {row.doctor}
-                      </div>
-                      <div className="text-[11px] text-[#8b9bae]">
-                        {row.specialty}
-                      </div>
-                    </td>
-
-                    {/* Last Visit */}
-                    <td className="py-4 px-4 text-xs text-[#5a6a76]">
-                      {row.previousVisit}
-                    </td>
-
-                    {/* Follow-up Date & Time */}
-                    <td className="py-4 px-4">
-                      <div className="text-xs font-bold text-[#1a2632]">
+                      {/* Follow-up Date & Time */}
+                      <td className="py-4 px-4 text-xs text-[#1a2632] font-medium">
                         {row.followUpDate}
-                      </div>
-                      <div className="text-[11px] text-[#3a9898] font-semibold">
-                        {row.followUpTime}
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Location */}
-                    <td className="py-4 px-4 text-xs font-semibold text-[#1a2632]">
-                      {row.location}
-                    </td>
+                      {/* Location */}
+                      <td className="py-4 px-4 text-xs text-[#1a2632] font-medium">
+                        {row.location}
+                      </td>
 
-                    {/* Action Button & Status Badge */}
-                    <td className="py-4 px-6 text-center">
-                      {row.status === "Completed" ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold border border-emerald-200">
-                          <CheckCircle size={12} /> Completed
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => markCompleted(row.id)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                            row.status === "Due Today"
-                              ? "bg-[#3a9898] text-white hover:bg-[#2b6e6e]"
-                              : row.status === "Overdue"
-                                ? "bg-rose-500 text-white hover:bg-rose-600"
-                                : "bg-[#3a9898] text-white hover:bg-[#2b6e6e]"
-                          }`}
-                        >
-                          {row.status === "Due Today"
-                            ? "Start Visit"
-                            : row.status}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Status Badge */}
+                      <td className="py-4 px-4">
+                        {row.status === "Completed" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-semibold border border-emerald-200">
+                            <CheckCircle2 size={12} /> Completed
+                          </span>
+                        ) : row.status === "Missed" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f8fafc] text-[#718096] text-[11px] font-semibold border border-[#e2e8f0]">
+                            <AlertCircle size={12} className="text-[#a0aec0]" />{" "}
+                            Missed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#eaf6f5] text-[#3a9898] text-[11px] font-semibold border border-[#c4e4e0]">
+                            <CheckCircle2 size={12} /> Due Soon
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Action Icons */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            title="Message / Chat"
+                            className="p-1.5 text-[#3a9898] bg-[#f0f4f5] border border-[#d2e3e3] rounded-md hover:bg-[#3a9898] hover:text-white transition-colors cursor-pointer"
+                          >
+                            <MessageSquare size={14} />
+                          </button>
+                          {row.status !== "Completed" && (
+                            <button
+                              onClick={() => handleMarkCompleted(row.id)}
+                              title="Mark Completed"
+                              className="p-1.5 text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-600 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Check size={14} />
+                            </button>
+                          )}
+                          <button
+                            title="Patient Profile"
+                            className="p-1.5 text-[#3a9898] bg-[#f0f4f5] border border-[#d2e3e3] rounded-md hover:bg-[#3a9898] hover:text-white transition-colors cursor-pointer"
+                          >
+                            <UserCheck size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-        </div>
-
-        {/* Footer Pagination */}
-        <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-xs text-[#5a6a76]">
-          <div>
-            Showing 1 to {filteredRecords.length} of {records.length} entries
-          </div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">
-              Previous
-            </button>
-            <button className="px-3 py-1 rounded bg-[#3a9898] text-white font-medium">
-              1
-            </button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors">
-              2
-            </button>
-            <button className="px-3 py-1 rounded hover:bg-[#f0f4f5] transition-colors border border-transparent hover:border-[#dde5e7]">
-              Next
-            </button>
-          </div>
         </div>
       </div>
     </div>

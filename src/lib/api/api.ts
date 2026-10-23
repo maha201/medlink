@@ -11,9 +11,22 @@ export const API_ENDPOINTS = {
 
   // Appointments Management
   hospitalAppointments: "hospital/appointments",
+  hospitalAppointmentsKpi: "hospital/appointments/kpi",
   hospitalTodayOpd: "hospital/appointments/",
   hospitalAppointmentById: "hospital/appointments/{id}",
   updateHospitalAppointmentStatus: "hospital/appointments/{id}/status",
+
+  // Consultations & Follow-Ups
+  hospitalConsultations: "hospital/consultations",
+  hospitalFollowUps: "hospital/follow-ups",
+
+  // Finance Module
+  hospitalFinanceExpenses: "hospital/finance/expenses",
+  hospitalFinanceLedger: "hospital/finance/ledger",
+  hospitalFinanceOverview: "hospital/finance/overview",
+
+  // Staff Management Module
+  hospitalStaffAttendance: "hospital/staff/attendance",
 
   // Hospital APIs
   hospitalDashboard: "hospital/dashboard",

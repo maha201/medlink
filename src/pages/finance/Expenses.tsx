@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Receipt,
   Eye,
@@ -8,8 +8,10 @@ import {
   CheckCircle2,
   Loader2,
   IndianRupee,
+  RefreshCw,
 } from "lucide-react";
-import AddExpenseModal from "./AddExpenseModal"; // நீங்கள் உருவாக்கிய AddExpenseModal கோப்பு
+import AddExpenseModal from "./AddExpenseModal";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 interface ExpenseItem {
   id: string;
@@ -24,30 +26,8 @@ interface ExpenseItem {
 }
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([
-    {
-      id: "1",
-      expenseNo: "EXP-2026-001",
-      date: "2026-10-01",
-      category: "Premise Rent",
-      description: "Monthly clinic premise lease",
-      vendor: "Metro Healthcare Estates",
-      amount: 45000,
-      method: "Bank Transfer",
-      status: "Disbursed",
-    },
-    {
-      id: "2",
-      expenseNo: "EXP-2026-002",
-      date: "2026-10-03",
-      category: "Medical Supplies",
-      description: "Surgical masks and gloves bulk pack",
-      vendor: "Apollo Surgical Supplies",
-      amount: 12500,
-      method: "Card",
-      status: "Disbursed",
-    },
-  ]);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Modal / Drawer States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -56,37 +36,78 @@ export default function Expenses() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
+  const fetchExpenses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`${API_ENDPOINTS.hospitalFinanceExpenses}?limit=50`, {
+        method: "GET",
+      });
+      const data = typeof res?.json === "function" ? await res.json() : res;
+
+      if (data?.data && Array.isArray(data.data)) {
+        setExpenses(data.data);
+      } else if (Array.isArray(data)) {
+        setExpenses(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch expenses:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchExpenses();
+  }, [fetchExpenses]);
+
   // Add Success
-  const handleAddSuccess = (newExpense: ExpenseItem) => {
-    setExpenses((prev) => [newExpense, ...prev]);
+  const handleAddSuccess = () => {
+    fetchExpenses();
   };
 
   // Edit Save
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editExpense) return;
     setUpdating(true);
 
-    setTimeout(() => {
+    try {
+      await apiFetch(`${API_ENDPOINTS.hospitalFinanceExpenses}/${editExpense.id}`, {
+        method: "PUT",
+        body: JSON.stringify(editExpense),
+      });
+
       setExpenses((prev) =>
         prev.map((item) => (item.id === editExpense.id ? editExpense : item)),
       );
       if (viewExpense && viewExpense.id === editExpense.id) {
         setViewExpense(editExpense);
       }
-      setUpdating(false);
       setEditExpense(null);
-    }, 400);
+    } catch (err) {
+      console.error("Failed to update expense:", err);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // Delete Confirm
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteId) return;
-    setExpenses((prev) => prev.filter((item) => item.id !== deleteId));
-    if (viewExpense && viewExpense.id === deleteId) {
-      setViewExpense(null);
+    try {
+      await apiFetch(`${API_ENDPOINTS.hospitalFinanceExpenses}/${deleteId}`, {
+        method: "DELETE",
+      });
+
+      setExpenses((prev) => prev.filter((item) => item.id !== deleteId));
+      if (viewExpense && viewExpense.id === deleteId) {
+        setViewExpense(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete expense:", err);
+    } finally {
+      setDeleteId(null);
     }
-    setDeleteId(null);
   };
 
   const inputCls =

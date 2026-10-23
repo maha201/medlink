@@ -9,6 +9,8 @@ import {
   Scissors,
   Stethoscope,
   Loader2,
+  MapPin,
+  UserPlus,
 } from "lucide-react";
 import { useState, useEffect, FormEvent } from "react";
 import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
@@ -66,6 +68,15 @@ export default function BookAppointmentModal({
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("Female");
   const [age, setAge] = useState("");
+
+  // New Patient Identity & Contact Fields
+  const [email, setEmail] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [cityPostalCode, setCityPostalCode] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyRelationship, setEmergencyRelationship] = useState("Spouse");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
 
   const [doctorId, setDoctorId] = useState("1");
   const departmentId = "1";
@@ -173,10 +184,22 @@ export default function BookAppointmentModal({
       consultationType: consultationType,
       consultationSource: consultationSource,
       age: Number(age) || 0,
+      email,
+      nationalId,
+      streetAddress,
+      cityPostalCode,
+      emergencyContactName,
+      emergencyRelationship,
+      emergencyPhone,
     };
 
     try {
-      await apiFetch(API_ENDPOINTS.hospitalAppointments, {
+      const endpoint =
+        patientTab === "new"
+          ? API_ENDPOINTS.hospitalPatients
+          : API_ENDPOINTS.hospitalAppointments;
+
+      await apiFetch(endpoint, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -185,7 +208,10 @@ export default function BookAppointmentModal({
       onClose();
     } catch (err: any) {
       setErrorMsg(
-        err?.message || "Appointment booking failed. Please try again.",
+        err?.message ||
+          (patientTab === "new"
+            ? "Patient registration failed. Please try again."
+            : "Appointment booking failed. Please try again."),
       );
     } finally {
       setLoading(false);
@@ -215,15 +241,23 @@ export default function BookAppointmentModal({
         <div className="px-7 py-5 flex items-start justify-between shrink-0 border-b border-[#f0f4f5]">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-full bg-[#eaf6f5] flex items-center justify-center shrink-0">
-              <CalendarPlus size={18} className="text-[#3a9898]" />
+              {patientTab === "new" ? (
+                <UserPlus size={18} className="text-[#3a9898]" />
+              ) : (
+                <CalendarPlus size={18} className="text-[#3a9898]" />
+              )}
             </div>
             <div>
               <h2 className="text-[16px] font-bold text-[#1a2632]">
-                Book New Appointment
+                {patientTab === "new"
+                  ? "Register New Patient"
+                  : "Book New Appointment"}
               </h2>
               <p className="text-[12px] text-[#8b9bae] mt-0.5">
-                Fill in patient and scheduling details for outpatient or surgery
-                appointment[cite: 3]
+                {patientTab === "new"
+                  ? "Enter personal, contact, and identity details to register a new patient."
+                  : "Fill in patient and scheduling details for outpatient or surgery appointment"}{" "}
+                [cite: 3]
               </p>
             </div>
           </div>
@@ -261,10 +295,8 @@ export default function BookAppointmentModal({
                     type="button"
                     onClick={() => {
                       setPatientTab(t);
-                      if (t === "new") {
-                        if (onOpenRegisterPatient) {
-                          onOpenRegisterPatient();
-                        }
+                      if (t === "new" && onOpenRegisterPatient) {
+                        onOpenRegisterPatient();
                       }
                     }}
                     className={`px-3.5 py-1.5 rounded-md transition-all capitalize cursor-pointer ${
@@ -438,6 +470,107 @@ export default function BookAppointmentModal({
               </div>
             </div>
           </div>
+          {/* Contact & Identity Identification Section (Shown only when patientTab === 'new') */}
+          {patientTab === "new" && (
+            <div className="border border-[#e8edf2] rounded-[14px] p-5 mb-4 bg-[#fcfdfd]">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 rounded-md bg-[#eaf6f5] flex items-center justify-center">
+                  <MapPin size={13} className="text-[#3a9898]" />
+                </div>
+                <h3 className="text-[13px] font-bold text-[#1a2632]">
+                  Contact & Identity Identification
+                </h3>
+              </div>
+
+              <div className="space-y-3.5">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Phone Number{reqStar}</label>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={inputCls}
+                      placeholder="+91 98765 43210"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Email Address</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={inputCls}
+                      placeholder="riya@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>National ID / SSN</label>
+                    <input
+                      value={nationalId}
+                      onChange={(e) => setNationalId(e.target.value)}
+                      className={inputCls}
+                      placeholder="XXXX-XXXX-XXXX"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Street Address</label>
+                    <input
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      className={inputCls}
+                      placeholder="12, MG Road, Anna Nagar"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>City & Postal Code</label>
+                    <input
+                      value={cityPostalCode}
+                      onChange={(e) => setCityPostalCode(e.target.value)}
+                      className={inputCls}
+                      placeholder="Chennai - 600040"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Emergency Contact Name</label>
+                    <input
+                      value={emergencyContactName}
+                      onChange={(e) => setEmergencyContactName(e.target.value)}
+                      className={inputCls}
+                      placeholder="e.g. Arjun Sharma"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Relationship</label>
+                    <select
+                      value={emergencyRelationship}
+                      onChange={(e) => setEmergencyRelationship(e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="Spouse">Spouse</option>
+                      <option value="Parent">Parent</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Emergency Phone</label>
+                    <input
+                      value={emergencyPhone}
+                      onChange={(e) => setEmergencyPhone(e.target.value)}
+                      className={inputCls}
+                      placeholder="+91 87654 32109"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Section 2 — Clinical Details */}
           <div className="border border-[#e8edf2] rounded-[14px] p-5">
@@ -611,12 +744,14 @@ export default function BookAppointmentModal({
               {loading ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Booking...
+                  {patientTab === "new" ? "Registering..." : "Booking..."}
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={15} />
-                  Confirm & Book Appointment
+                  {patientTab === "new"
+                    ? "Confirm & Register Patient"
+                    : "Confirm & Book Appointment"}
                 </>
               )}
             </button>

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
-import { History, Search, Download, Calendar, Filter } from "lucide-react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { History, Search, Download, Calendar, Filter, Loader2, RefreshCw } from "lucide-react";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 interface AttendanceHistoryRecord {
   id: string;
@@ -90,24 +91,67 @@ const mockHistoryData: AttendanceHistoryRecord[] = [
 ];
 
 export default function AttendanceHistory() {
+  const currentMonthStr = new Date().toISOString().substring(0, 7);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("2026-10");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [selectedStatus, setSelectedStatus] = useState("All");
+  const [records, setRecords] = useState<AttendanceHistoryRecord[]>(mockHistoryData);
+  const [loading, setLoading] = useState(false);
 
-  const filteredHistory = useMemo(() => {
-    return mockHistoryData.filter((record) => {
-      const matchesSearch =
-        record.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.staffId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.department.toLowerCase().includes(searchTerm.toLowerCase());
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams({
+        month: selectedMonth,
+        status: selectedStatus,
+        search: searchTerm,
+      });
 
-      const matchesMonth = record.date.startsWith(selectedMonth);
-      const matchesStatus =
-        selectedStatus === "All" || record.status === selectedStatus;
+      const res = await apiFetch(
+        `${API_ENDPOINTS.hospitalStaffAttendance}?${queryParams.toString()}`,
+        { method: "GET" }
+      );
+      const data = typeof res?.json === "function" ? await res.json() : res;
 
-      return matchesSearch && matchesMonth && matchesStatus;
-    });
-  }, [searchTerm, selectedMonth, selectedStatus]);
+      if (data?.data && Array.isArray(data.data)) {
+        setRecords(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load attendance history:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedMonth, selectedStatus, searchTerm]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleExport = () => {
+    if (records.length === 0) {
+      alert("No records to export.");
+      return;
+    }
+    const headers = ["Date", "EMP ID", "Staff Name", "Department", "Check-In", "Check-Out", "Working Hours", "Status"];
+    const rows = records.map((r) => [
+      r.date,
+      r.staffId,
+      `"${r.staffName.replace(/"/g, '""')}"`,
+      `"${r.department.replace(/"/g, '""')}"`,
+      r.checkIn,
+      r.checkOut,
+      r.workingHours,
+      r.status,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `attendance_report_${selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -158,14 +202,21 @@ export default function AttendanceHistory() {
         </div>
 
         {/* Export Button */}
-        <button
-          onClick={() =>
-            alert("Downloading Monthly Attendance Report (Excel/PDF)")
-          }
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#dde5e7] hover:bg-[#eaf6f5] text-[#3a9898] text-xs font-bold rounded-lg transition-all shadow-sm"
-        >
-          <Download size={14} /> Export Report
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchHistory()}
+            title="Refresh History"
+            className="p-1.5 bg-white border border-[#dde5e7] hover:bg-[#eaf6f5] text-[#3a9898] rounded-lg transition-all shadow-sm"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          </button>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#dde5e7] hover:bg-[#eaf6f5] text-[#3a9898] text-xs font-bold rounded-lg transition-all shadow-sm"
+          >
+            <Download size={14} /> Export Report
+          </button>
+        </div>
       </div>
 
       {/* HISTORY TABLE */}
@@ -184,8 +235,17 @@ export default function AttendanceHistory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f4f5]">
-            {filteredHistory.length > 0 ? (
-              filteredHistory.map((record) => (
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-[#8b9bae]">
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin text-[#3a9898]" />
+                    <span>Loading attendance records...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : records.length > 0 ? (
+              records.map((record) => (
                 <tr
                   key={record.id}
                   className="hover:bg-[#f5f7f8] transition-colors"

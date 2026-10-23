@@ -1,5 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from "react";
 import { X, Receipt, CheckCircle2, Loader2, IndianRupee } from "lucide-react";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 interface Props {
   onClose: () => void;
@@ -40,22 +41,31 @@ export default function AddExpenseModal({ onClose, onSuccess }: Props) {
     }
 
     try {
-      // API call simulation or actual fetch
-      // await apiFetch('/expenses', { method: 'POST', body: JSON.stringify(formData) });
+      const res = await apiFetch(API_ENDPOINTS.hospitalFinanceExpenses, {
+        method: "POST",
+        body: JSON.stringify({
+          ...formData,
+          amount: Number(formData.amount),
+        }),
+      });
 
-      setTimeout(() => {
+      const data = typeof res?.json === "function" ? await res.json() : res;
+
+      if (data?.success || res?.ok) {
         if (onSuccess) {
-          onSuccess({
+          onSuccess(data?.data || {
             ...formData,
             id: String(Date.now()),
             amount: Number(formData.amount),
           });
         }
-        setLoading(false);
         onClose();
-      }, 500);
+      } else {
+        setError(data?.message || "Failed to add expense record.");
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to add expense record.");
+    } finally {
       setLoading(false);
     }
   };

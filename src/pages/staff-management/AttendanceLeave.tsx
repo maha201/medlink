@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   CalendarCheck,
   ChevronDown,
@@ -7,7 +7,10 @@ import {
   Calendar,
   Clock,
   AlertCircle,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import { apiFetch, API_ENDPOINTS } from "@/lib/api/api";
 
 interface AttendanceRecord {
   id: string;
@@ -21,7 +24,7 @@ interface AttendanceRecord {
   leaveReason?: string;
 }
 
-const initialAttendance: AttendanceRecord[] = [
+const defaultStaffAttendance: AttendanceRecord[] = [
   {
     id: "1",
     name: "Dr. Arun Sharma",
@@ -61,7 +64,8 @@ const initialAttendance: AttendanceRecord[] = [
 
 export default function AttendanceLeave() {
   const [attendanceList, setAttendanceList] =
-    useState<AttendanceRecord[]>(initialAttendance);
+    useState<AttendanceRecord[]>(defaultStaffAttendance);
+  const [loading, setLoading] = useState(false);
 
   // Long Leave Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,17 +78,66 @@ export default function AttendanceLeave() {
     reason: "",
   });
 
+  const todayDate = new Date().toISOString().split("T")[0];
+
+  const fetchDailyAttendance = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(
+        `${API_ENDPOINTS.hospitalStaffAttendance}?date=${todayDate}`,
+        { method: "GET" },
+      );
+      const data = typeof res?.json === "function" ? await res.json() : res;
+
+      if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+        setAttendanceList(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch daily staff attendance:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [todayDate]);
+
+  useEffect(() => {
+    fetchDailyAttendance();
+  }, [fetchDailyAttendance]);
+
+  // Persist single attendance record to backend
+  const persistAttendance = async (record: AttendanceRecord) => {
+    try {
+      await apiFetch(API_ENDPOINTS.hospitalStaffAttendance, {
+        method: "POST",
+        body: JSON.stringify({
+          staffId: record.id,
+          date: todayDate,
+          status: record.status,
+          checkIn: record.checkIn,
+          checkOut: record.checkOut,
+          leaveStartDate: record.leaveStartDate,
+          leaveEndDate: record.leaveEndDate,
+          leaveReason: record.leaveReason,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to persist attendance:", err);
+    }
+  };
+
   // Handle status selection change from dropdown
   const handleStatusChange = (
     staff: AttendanceRecord,
     newStatus: AttendanceRecord["status"],
   ) => {
+    if (newStatus === staff.status) {
+      persistAttendance(staff);
+      return;
+    }
+
     if (newStatus === "Long Leave") {
-      // Open Modal to enter date range & reason for Long Leave
       setSelectedStaff(staff);
       setLeaveData({
-        startDate:
-          staff.leaveStartDate || new Date().toISOString().split("T")[0],
+        startDate: staff.leaveStartDate || todayDate,
         endDate: staff.leaveEndDate || "",
         reason: staff.leaveReason || "",
       });
@@ -92,23 +145,22 @@ export default function AttendanceLeave() {
       return;
     }
 
+    const isWorking = newStatus === "Present" || newStatus === "Half-Day";
+    const updatedRecord: AttendanceRecord = {
+      ...staff,
+      status: newStatus,
+      checkIn: isWorking ? staff.checkIn || "09:00" : "",
+      checkOut: isWorking ? staff.checkOut || (newStatus === "Half-Day" ? "13:00" : "17:00") : "",
+      leaveStartDate: undefined,
+      leaveEndDate: undefined,
+      leaveReason: undefined,
+    };
+
     setAttendanceList((prev) =>
-      prev.map((item) => {
-        if (item.id === staff.id) {
-          const isWorking = newStatus === "Present" || newStatus === "Half-Day";
-          return {
-            ...item,
-            status: newStatus,
-            checkIn: isWorking ? item.checkIn || "09:00" : "",
-            checkOut: isWorking ? item.checkOut || "17:00" : "",
-            leaveStartDate: undefined,
-            leaveEndDate: undefined,
-            leaveReason: undefined,
-          };
-        }
-        return item;
-      }),
+      prev.map((item) => (item.id === staff.id ? updatedRecord : item)),
     );
+
+    persistAttendance(updatedRecord);
   };
 
   // Submit Long Leave Details
@@ -116,23 +168,23 @@ export default function AttendanceLeave() {
     e.preventDefault();
     if (!selectedStaff) return;
 
+    const updatedRecord: AttendanceRecord = {
+      ...selectedStaff,
+      status: "Long Leave",
+      checkIn: "",
+      checkOut: "",
+      leaveStartDate: leaveData.startDate,
+      leaveEndDate: leaveData.endDate,
+      leaveReason: leaveData.reason,
+    };
+
     setAttendanceList((prev) =>
-      prev.map((item) => {
-        if (item.id === selectedStaff.id) {
-          return {
-            ...item,
-            status: "Long Leave",
-            checkIn: "",
-            checkOut: "",
-            leaveStartDate: leaveData.startDate,
-            leaveEndDate: leaveData.endDate,
-            leaveReason: leaveData.reason,
-          };
-        }
-        return item;
-      }),
+      prev.map((item) =>
+        item.id === selectedStaff.id ? updatedRecord : item,
+      ),
     );
 
+    persistAttendance(updatedRecord);
     setIsModalOpen(false);
     setSelectedStaff(null);
   };
@@ -146,6 +198,8 @@ export default function AttendanceLeave() {
     setAttendanceList((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
     );
+    const target = attendanceList.find((item) => item.id === id);
+    if (target) persistAttendance({ ...target, [field]: value });
   };
 
   const inputCls =
@@ -286,6 +340,12 @@ export default function AttendanceLeave() {
                             e.target.value as AttendanceRecord["status"],
                           )
                         }
+                        onClick={(e) => {
+                          const sel = e.currentTarget;
+                          // force onChange to fire even if same option re-selected
+                          sel.value = "";
+                          requestAnimationFrame(() => { sel.value = item.status; });
+                        }}
                         className="appearance-none px-3.5 py-1.5 pr-8 bg-[#f5f7f8] hover:bg-[#eaf6f5] text-[#5a6a76] hover:text-[#3a9898] text-xs font-semibold rounded-lg transition-colors border border-[#dde5e7] hover:border-[#b5d9d5] focus:outline-none cursor-pointer"
                       >
                         <option value="Present">Present</option>

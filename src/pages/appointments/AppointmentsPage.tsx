@@ -10,7 +10,6 @@ import {
   Edit,
   Trash2,
   TrendingUp,
-  Calendar,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import BookAppointmentModal from "./BookAppointmentModal";
@@ -46,20 +45,36 @@ export interface AppointmentItem {
   [key: string]: any;
 }
 
-// Dummy data for top Trend chart matching the layout image
-const trendData = [
-  { name: "Mon", appointments: 25 },
-  { name: "Tue", appointments: 40 },
-  { name: "Wed", appointments: 20 },
-  { name: "Thu", appointments: 38 },
-  { name: "Fri", appointments: 35 },
-  { name: "Sat", appointments: 32 },
-  { name: "Sun", appointments: 45 },
+export interface AppointmentKpiData {
+  todayAppointments: number;
+  completedCount: number;
+  ongoingCount: number;
+  cancelledCount: number;
+  totalWeeklyAppointments: number;
+  typeCounts: {
+    consultation: { count: number; percentage: number };
+    followUp: { count: number; percentage: number };
+    surgery: { count: number; percentage: number };
+    emergency: { count: number; percentage: number };
+  };
+  weeklyTrend: Array<{ name: string; date?: string; appointments: number }>;
+}
+
+// Fallback dummy data for top Trend chart
+const defaultTrendData = [
+  { name: "Mon", appointments: 0 },
+  { name: "Tue", appointments: 0 },
+  { name: "Wed", appointments: 0 },
+  { name: "Thu", appointments: 0 },
+  { name: "Fri", appointments: 0 },
+  { name: "Sat", appointments: 0 },
+  { name: "Sun", appointments: 0 },
 ];
 
 export default function AppointmentsPage() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const [kpiData, setKpiData] = useState<AppointmentKpiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +82,29 @@ export default function AppointmentsPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalEntries, setTotalEntries] = useState<number>(0);
+
+  const fetchKpiData = useCallback(async () => {
+    try {
+      const rawResponse = await apiFetch(
+        API_ENDPOINTS.hospitalAppointmentsKpi,
+        {
+          method: "GET",
+        },
+      );
+      const res =
+        typeof rawResponse.json === "function"
+          ? await rawResponse.json()
+          : rawResponse;
+
+      if (res?.data) {
+        setKpiData(res.data);
+      } else if (res && typeof res === "object") {
+        setKpiData(res);
+      }
+    } catch (err: any) {
+      console.error("Fetch Appointment KPI Error:", err);
+    }
+  }, []);
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
@@ -104,11 +142,13 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    fetchKpiData();
+  }, [fetchAppointments, fetchKpiData]);
 
   const handleAppointmentCreated = () => {
     setShowModal(false);
     fetchAppointments();
+    fetchKpiData();
   };
 
   const handleDelete = (id: number) => {
@@ -116,6 +156,12 @@ export default function AppointmentsPage() {
       setAppointments((prev) => prev.filter((item) => item.id !== id));
     }
   };
+
+  // Safe trend data fallback to avoid undefined errors
+  const chartData =
+    kpiData?.weeklyTrend && kpiData.weeklyTrend.length > 0
+      ? kpiData.weeklyTrend
+      : defaultTrendData;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 font-sans">
@@ -126,81 +172,81 @@ export default function AppointmentsPage() {
         />
       )}
 
-      {/* ── TOP 4 KPI SUMMARY CARDS (Matching Reference Layout) ── */}
+      {/* ── TOP 4 KPI SUMMARY CARDS ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1 */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[11.5px] font-semibold text-[#8b9bae]">
                 Today's Appointments
               </p>
-              <h3 className="text-2xl font-black text-[#1a2632] mt-1">52</h3>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">
+                {kpiData?.todayAppointments ?? 0}
+              </h3>
             </div>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
-              <TrendingUp size={11} /> +2.45%
+              <TrendingUp size={11} /> Live
             </span>
           </div>
           <p className="text-[11px] text-[#8b9bae] mt-3">
-            The available bed capacity is{" "}
-            <strong className="text-[#1a2632]">180</strong>
+            Total active appointments today
           </p>
         </div>
 
-        {/* Card 2 */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[11.5px] font-semibold text-[#8b9bae]">
                 Completed
               </p>
-              <h3 className="text-2xl font-black text-[#1a2632] mt-1">28</h3>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">
+                {kpiData?.completedCount ?? 0}
+              </h3>
             </div>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
-              <TrendingUp size={11} /> +0.5%
+              <TrendingUp size={11} /> Success
             </span>
           </div>
           <p className="text-[11px] text-[#8b9bae] mt-3">
-            The incomplete appointments are{" "}
-            <strong className="text-[#1a2632]">24</strong>
+            Completed consultations & appointments
           </p>
         </div>
 
-        {/* Card 3 */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[11.5px] font-semibold text-[#8b9bae]">
                 Ongoing
               </p>
-              <h3 className="text-2xl font-black text-[#1a2632] mt-1">18</h3>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">
+                {kpiData?.ongoingCount ?? 0}
+              </h3>
             </div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10.5px] font-bold">
-              <TrendingUp size={11} className="rotate-180" /> -0.25%
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10.5px] font-bold">
+              <Clock size={11} /> In Queue
             </span>
           </div>
           <p className="text-[11px] text-[#8b9bae] mt-3">
-            The performance is <strong className="text-rose-600">slower</strong>{" "}
-            than yesterday
+            In-progress and scheduled visits
           </p>
         </div>
 
-        {/* Card 4 */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#dde5e7] flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[11.5px] font-semibold text-[#8b9bae]">
                 Canceled
               </p>
-              <h3 className="text-2xl font-black text-[#1a2632] mt-1">6</h3>
+              <h3 className="text-2xl font-black text-[#1a2632] mt-1">
+                {kpiData?.cancelledCount ?? 0}
+              </h3>
             </div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10.5px] font-bold">
-              <TrendingUp size={11} /> +1.3%
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10.5px] font-bold">
+              <TrendingUp size={11} className="rotate-180" /> Cancelled
             </span>
           </div>
           <p className="text-[11px] text-[#8b9bae] mt-3">
-            The performance is{" "}
-            <strong className="text-[#3a9898]">higher</strong> than yesterday
+            Cancelled patient bookings
           </p>
         </div>
       </div>
@@ -215,8 +261,10 @@ export default function AppointmentsPage() {
                 Appointment Trends
               </h3>
               <p className="text-xs text-[#8b9bae] mt-0.5">
-                Total Appointments:{" "}
-                <strong className="text-[#1a2632]">320</strong>
+                Total Appointments (7 Days):{" "}
+                <strong className="text-[#1a2632]">
+                  {kpiData?.totalWeeklyAppointments ?? 0}
+                </strong>
               </p>
             </div>
             <button className="flex items-center gap-1.5 bg-[#f5f7f8] border border-[#dde5e7] text-[#5a6a76] text-xs font-semibold px-3 py-1.5 rounded-xl cursor-pointer">
@@ -226,7 +274,7 @@ export default function AppointmentsPage() {
           <div className="w-full h-44">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={trendData}
+                data={chartData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <defs>
@@ -283,48 +331,68 @@ export default function AppointmentsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-[#1a2632]">Consultation</span>
-                <span className="text-[#3a9898]">50% (26 Patients)</span>
+                <span className="text-[#3a9898]">
+                  {kpiData?.typeCounts?.consultation?.percentage ?? 0}% (
+                  {kpiData?.typeCounts?.consultation?.count ?? 0} Patients)
+                </span>
               </div>
               <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#3a9898] rounded-full"
-                  style={{ width: "50%" }}
+                  className="h-full bg-[#3a9898] rounded-full transition-all"
+                  style={{
+                    width: `${kpiData?.typeCounts?.consultation?.percentage ?? 0}%`,
+                  }}
                 ></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-[#1a2632]">Follow-up</span>
-                <span className="text-[#3a9898]">25% (13 Patients)</span>
+                <span className="text-[#3a9898]">
+                  {kpiData?.typeCounts?.followUp?.percentage ?? 0}% (
+                  {kpiData?.typeCounts?.followUp?.count ?? 0} Patients)
+                </span>
               </div>
               <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#3a9898]/80 rounded-full"
-                  style={{ width: "25%" }}
+                  className="h-full bg-[#3a9898]/80 rounded-full transition-all"
+                  style={{
+                    width: `${kpiData?.typeCounts?.followUp?.percentage ?? 0}%`,
+                  }}
                 ></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-[#1a2632]">Surgery</span>
-                <span className="text-[#3a9898]">15% (8 Patients)</span>
+                <span className="text-[#3a9898]">
+                  {kpiData?.typeCounts?.surgery?.percentage ?? 0}% (
+                  {kpiData?.typeCounts?.surgery?.count ?? 0} Patients)
+                </span>
               </div>
               <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#3a9898]/60 rounded-full"
-                  style={{ width: "15%" }}
+                  className="h-full bg-[#3a9898]/60 rounded-full transition-all"
+                  style={{
+                    width: `${kpiData?.typeCounts?.surgery?.percentage ?? 0}%`,
+                  }}
                 ></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
                 <span className="text-[#1a2632]">Emergency</span>
-                <span className="text-[#3a9898]">10% (5 Patients)</span>
+                <span className="text-[#3a9898]">
+                  {kpiData?.typeCounts?.emergency?.percentage ?? 0}% (
+                  {kpiData?.typeCounts?.emergency?.count ?? 0} Patients)
+                </span>
               </div>
               <div className="w-full h-2 bg-[#f5f7f8] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-rose-500 rounded-full"
-                  style={{ width: "10%" }}
+                  className="h-full bg-rose-500 rounded-full transition-all"
+                  style={{
+                    width: `${kpiData?.typeCounts?.emergency?.percentage ?? 0}%`,
+                  }}
                 ></div>
               </div>
             </div>
@@ -334,7 +402,6 @@ export default function AppointmentsPage() {
 
       {/* ── MAIN APPOINTMENTS TABLE SECTION ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-[#dde5e7] overflow-hidden">
-        {/* Header & Filters */}
         <div className="p-6 border-b border-[#dde5e7] flex justify-between items-center bg-white flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#1a2632]">Appointments</h2>
@@ -369,7 +436,6 @@ export default function AppointmentsPage() {
           </div>
         </div>
 
-        {/* Dynamic States: Loading, Error, Empty, or Table */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-[#8b9bae]">
             <Loader2 className="w-8 h-8 animate-spin text-[#3a9898] mb-2" />
@@ -438,7 +504,6 @@ export default function AppointmentsPage() {
                         />
                       </td>
 
-                      {/* Patient Name & MRN */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center font-bold text-[#3a9898] text-sm bg-[#eaf6f5]">
@@ -463,12 +528,10 @@ export default function AppointmentsPage() {
                         </div>
                       </td>
 
-                      {/* Phone Number */}
                       <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
                         {row.phone || "+91 98765-43210"}
                       </td>
 
-                      {/* Doctor Name & Department */}
                       <td className="py-4 px-4">
                         <div className="text-sm font-bold text-[#1a2632]">
                           {row.doctorName || "—"}
@@ -478,12 +541,10 @@ export default function AppointmentsPage() {
                         </div>
                       </td>
 
-                      {/* Appointment Type */}
                       <td className="py-4 px-4 text-sm font-semibold text-[#1a2632] capitalize">
                         {row.appointmentType || "Consultation"}
                       </td>
 
-                      {/* Date & Time */}
                       <td className="py-4 px-4 text-sm text-[#5a6a76] whitespace-nowrap">
                         <div>{row.appointmentDate || "12 March 2035"}</div>
                         <div className="text-xs text-[#8b9bae] flex items-center gap-1 mt-0.5">
@@ -491,7 +552,6 @@ export default function AppointmentsPage() {
                         </div>
                       </td>
 
-                      {/* Status Badge */}
                       <td className="py-4 px-4 text-center">
                         {row.status?.toLowerCase() === "completed" ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#eaf6f5] text-[#3a9898] text-xs font-bold border border-[#c4e4e0] capitalize">
@@ -515,7 +575,6 @@ export default function AppointmentsPage() {
                         )}
                       </td>
 
-                      {/* Action Buttons */}
                       <td className="py-4 px-6 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
@@ -551,7 +610,6 @@ export default function AppointmentsPage() {
               </table>
             </div>
 
-            {/* Pagination Controls */}
             <div className="p-4 border-t border-[#dde5e7] flex items-center justify-between text-xs text-[#8b9bae]">
               <div>
                 Total Entries:{" "}
